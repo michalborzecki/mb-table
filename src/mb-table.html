@@ -1,0 +1,180 @@
+ <div *ngIf="showCreateButton || isEditionEnabled || isDuplicationEnabled ||
+  isDeletionEnabled || isPaginationEnabled || showResetSortButton"
+  class="mb-table-toolbar clearfix">
+  <ng-container *ngIf="editedRows.length == 0 && batchChangeRow == null">
+    <button *ngIf="showCreateButton" class="btn btn-default btn-sm" (click)="onCreate()"><span class="glyphicon glyphicon-plus"></span></button>
+    <button *ngIf="isEditionEnabled" class="btn btn-default btn-sm" (click)="edit(selectedRows)"><span class="glyphicon glyphicon-pencil"></span></button>
+    <button *ngIf="isDuplicationEnabled" class="btn btn-default btn-sm" (click)="duplicate(selectedRows)"><span class="glyphicon glyphicon-duplicate"></span></button>
+    <div *ngIf="isDeletionEnabled" class="btn-group">
+      <button class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <span class="glyphicon glyphicon-remove"></span>
+      </button>
+      <ul class="dropdown-menu">
+        <li><a (click)="remove(row)">Usunąć?</a></li>
+      </ul>
+    </div>
+    <button *ngIf="isBatchChangeEnabled && selectedRows.length == 1" class="btn btn-default btn-sm" (click)="batchChange(selectedRows[0])"><span class="glyphicon glyphicon-th-list"></span> Skopiuj do...</button>
+  </ng-container>
+  <ng-container *ngIf="editedRows.length > 0">
+    <button class="btn btn-default btn-sm" (click)="commitEdit()"><span class="glyphicon glyphicon-ok"></span> Zapisz</button>
+    <button class="btn btn-default btn-sm" (click)="cancelEdit()"><span class="glyphicon glyphicon-remove"></span> Anuluj</button>
+  </ng-container>
+  <ng-container *ngIf="batchChangeRow != null">
+    <button class="btn btn-default btn-sm" (click)="commitBatchChange()"><span class="glyphicon glyphicon-ok"></span> Zmień</button>
+    <button class="btn btn-default btn-sm" (click)="cancelBatchChange()"><span class="glyphicon glyphicon-remove"></span> Anuluj</button>
+  </ng-container>
+  <div *ngIf="isPaginationEnabled" class="pagination-description pull-right">
+    Stron: {{numberOfPages}}<br>
+    Rekordów: {{filteredSource.length}}
+  </div>
+  <div *ngIf="isPaginationEnabled" class="input-group pagination-bar pull-right">
+    <div class="input-group-btn">
+      <button
+        class="btn btn-sm btn-default"
+        [disabled]="selectedPage == 0"
+        (click)="changePage(0)">
+        <span class="glyphicon glyphicon-fast-backward"></span>
+      </button>
+      <button
+        class="btn btn-sm btn-default"
+        [disabled]="selectedPage == 0"
+        (click)="changePage(selectedPage - 1)">
+        <span class="glyphicon glyphicon-backward"></span>
+      </button>
+    </div>
+    <input
+      type="text"
+      class="form-control input-sm"
+      [ngModel]="selectedPageTextValue"
+      (ngModelChange)="changePageFromText($event)">
+    <div class="input-group-btn">
+      <button
+        class="btn btn-sm btn-default"
+        [disabled]="selectedPage == numberOfPages - 1"
+        (click)="changePage(selectedPage + 1)">
+        <span class="glyphicon glyphicon-forward"></span>
+      </button>
+      <button
+        class="btn btn-sm btn-default"
+        [disabled]="selectedPage == numberOfPages - 1"
+        (click)="changePage(numberOfPages - 1)">
+        <span class="glyphicon glyphicon-fast-forward"></span>
+      </button>
+    </div>
+  </div>
+  <div class="btn-group pull-right" role="group">
+    <button *ngIf="isFiltrationEnabled"
+    class="btn btn-sm btn-default"
+    (click)="toggleFiltration()"
+    [class.active]="isFiltrationActive">Filtruj</button>
+    <button *ngIf="showResetSortButton"
+      class="btn btn-sm btn-default" (click)="resetSort()">Przywróć sort.</button>
+  </div>
+  <button *ngFor="let button of settings.headerButtons"
+    class="btn btn-sm btn-default pull-right header-button"
+    (click)="button.clickAction()">{{button.text | async}}</button>
+</div> 
+<table class="mb-table table table-striped table-hover">
+  <thead>
+    <tr>
+      <th
+        *ngFor="let column of columns"
+        (click)="sortByColumn(column)"
+        [class.fixedWidth]="column.width != undefined"
+        [style.width]="column.width != undefined ? column.width : 'initial'"
+        >{{column.title | async}}&nbsp;<span class="glyphicon"
+          [class.glyphicon-triangle-bottom]="column.sort.direction == -1"
+          [class.glyphicon-triangle-top]="column.sort.direction == 1"></span>
+        </th>
+    </tr>
+    <tr *ngIf="isFiltrationEnabled">
+      <td *ngFor="let column of columns"
+        [ngSwitch]="column.filter.type">
+        <ng-container *ngIf="column.isFilterable">
+          <input *ngSwitchCase="'autocomplete'" type="text"
+            blank-option-text="Nie filtruj"
+            [(ngModel)]="column.filter.query"
+            (valueChanged)="refreshGrid()"
+            (click)="this.changeDetectorRef.markForCheck()"
+            ngui-auto-complete
+            class="form-control"
+            placeholder="{{column.title | async}}"
+            [disabled]="!isFiltrationActive"
+            [source]="column.filter.source.call(null)">
+          <input *ngSwitchCase="'checkbox'"
+            type="checkbox"
+            [ngModel]="column.filter.query"
+            [disabled]="!isFiltrationActive"
+            (change)="checkboxFilterChanged($event, column)"
+            class="form-control">
+          <input *ngSwitchDefault
+            class="form-control"
+            type="text"
+            placeholder="{{column.title | async}}"
+            [(ngModel)]="column.filter.query"
+            [formControl]="column.textFilterFormControl" />
+        </ng-container>
+      </td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let row of processedSource; let rowIndex = index"
+      [class.selected]="selectedRows.indexOf(row) > -1" 
+      [class.batchChangeRow]="batchChangeRow == row"
+      class="st-row-{{rowIndex}}">
+      <ng-container *ngFor="let column of columns; let i=index">
+        <ng-container *ngIf="!isRowEdited(row) || !column.isEditable">
+          <td [ngSwitch]="column.cellRenderer"
+            (dblclick)="edit([row], column)"
+            [class]="getCellStyleClasses(row, column)"
+            (click)="selectRow(row, $event)"
+            [style.minWidth]="column.calculatedWidth"
+            [style.maxWidth]="column.calculatedWidth">
+            <input *ngIf="batchChangeRow == row && column.isEditable"
+              type="checkbox"
+              [(ngModel)]="batchChangeColumnsSelection[i]">
+            <ng-container *ngSwitchCase="'checkbox'">
+              <span *ngIf="getCellValue(row, column)" class="glyphicon glyphicon-ok"></span>
+            </ng-container>
+            <ng-container *ngSwitchDefault>
+              {{getCellValue(row, column)}}
+            </ng-container>
+          </td>
+        </ng-container>
+        <td
+          *ngIf="isRowEdited(row) && column.isEditable"
+          [ngSwitch]="column.editor.type"
+          [class]="getCellStyleClasses(row, column) + ' st-col-' + i"
+          (click)="selectRow(row, $event)"
+          [style.minWidth]="column.calculatedWidth"
+          [style.maxWidth]="column.calculatedWidth">
+          <input *ngSwitchCase="'text'" type="text"
+            [(ngModel)]="getEditObject(row)[i].value"
+            class="form-control"
+            (keyup)="editorKeyUp($event, row)"
+            (click)="$event.stopPropagation()">
+          <input *ngSwitchCase="'number'" type="number"
+            [(ngModel)]="getEditObject(row)[i].value"
+            class="form-control"
+            (keyup)="editorKeyUp($event, row)"
+            (click)="$event.stopPropagation()">
+          <input *ngSwitchCase="'autocomplete'"
+            type="text"
+            [(ngModel)]="getEditObject(row)[i].value"
+            ngui-auto-complete
+            class="form-control"
+            blank-option-text="{{column.editor.showEmptyOption ? 'Wyczyść' : ''}}"
+            [source]="column.editor.source.call(null)"
+            (keyup)="editorKeyUp($event, row)"
+            (click)="this.changeDetectorRef.markForCheck()"
+            (click)="$event.stopPropagation()">
+          <input *ngSwitchCase="'checkbox'"
+            type="checkbox"
+            [(ngModel)]="getEditObject(row)[i].value"
+            class="form-control"
+            (click)="$event.stopPropagation()">
+        </td>
+      </ng-container>
+    </tr>
+  </tbody> 
+</table>

@@ -1,0 +1,32 @@
+{
+  "name": "mb-table",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/michalborzecki/mb-table"
+  },
+  "author": {
+    "name": "Michał Borzęcki",
+    "email": "michal.borzecki@hotmail.com"
+  },
+  "keywords": [
+    "angular"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/michalborzecki/mb-table/issues"
+  },
+  "main": "mb-table.umd.js",
+  "module": "mb-table.js",
+  "jsnext:main": "mb-table.js",
+  "typings": "mb-table.d.ts",
+  "peerDependencies": {
+    "@angular/core": "^4.0.0",
+    "@angular/forms": "^4.4.6",
+    "@ngui/auto-complete": "^0.16.0",
+    "bootstrap": "^3.3.7",
+    "jquery": "^3.2.1",
+    "rxjs": "^5.1.0",
+    "zone.js": "^0.8.4"
+  }
+}

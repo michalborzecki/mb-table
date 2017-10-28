@@ -1,0 +1,98 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-content: center;
+  align-items: flex-start;
+  position: relative;
+  height: 100%;
+  padding: 10px 0;
+}
+
+.mb-table-toolbar {
+  width: 100%;
+  .pull-right, .pull-left {
+    margin-bottom: 15px;
+  }
+  .pull-left {
+    margin-right: 0.5em;
+  }
+}
+
+table.mb-table {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-content: center;
+  align-items: flex-start;
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  height: 100%;
+  font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #606c71;
+
+  td, th {
+    font-size: .8em;
+    margin: 0;
+    min-height: 30px;
+    padding: 0.2rem 0.3rem;
+    border: 1px solid #e9ebec !important;
+    vertical-align: middle !important;
+    input[type="checkbox"] {
+      width: auto;
+      margin: 0 auto;
+      border: 0;
+      box-shadow: none;
+    }
+  }
+  thead {
+    display: block;
+    position: relative;
+    visibility: hidden;
+  }
+  tbody {
+    display: block;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    width: 100%;
+    height: 100%;
+    visibility: hidden;
+    tr {
+      &.selected {
+        background-color: #ddd !important;
+      }
+      &.batchChangeRow {
+        background-color: #bbb !important;
+      }
+      &:hover {
+        background-color: #f0f0f0;
+      }
+    }
+  }
+}
+
+.pagination-description {
+  font-size: 8pt;
+  text-align: center;
+  margin-left: 1em;
+}
+
+.pagination-bar {
+  width: 13em;
+  margin-left: 1em;
+  input {
+    text-align: center;
+  }
+  button {
+    font-size: 12px;
+  }
+}
+
+.header-button {
+  margin-right: 1em;
+}
