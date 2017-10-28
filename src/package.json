@@ -1,6 +1,6 @@
 {
   "name": "mb-table",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/michalborzecki/mb-table"
@@ -20,9 +20,9 @@
   "module": "mb-table.js",
   "jsnext:main": "mb-table.js",
   "typings": "mb-table.d.ts",
-  "peerDependencies": {
+  "dependencies": {
     "@angular/core": "^4.0.0",
-    "@angular/forms": "^4.4.6",
+    "@angular/forms": "^4.0.0",
     "@ngui/auto-complete": "^0.16.0",
     "bootstrap": "^3.3.7",
     "jquery": "^3.2.1",
