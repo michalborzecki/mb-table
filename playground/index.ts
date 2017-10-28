@@ -23,10 +23,20 @@ class AppComponent {
         id: 'firstName',
         title: 'First name',
       },
+      {
+        id: 'age',
+        title: 'Age',
+      },
     ],
     headerButtons: [],
   };
-  public tableData = [];
+  public tableData = [
+    {
+      lastName: 'aaa',
+      firstName: 'bbb',
+      age: 12,
+    }
+  ];
 }
 
 @NgModule({
