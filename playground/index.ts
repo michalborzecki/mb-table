@@ -10,7 +10,13 @@ import { MbTableModule } from 'mb-table';
 
 @Component({
   selector: 'app',
-  template: `<mb-table [settings]="tableSettings" [source]="tableData"></mb-table>`
+  template: `
+  <mb-table [settings]="tableSettings" [source]="tableData">
+    <div class="pull-right" table-header-end>
+      <button class="btn btn-sm btn-default header-button">btn1</button>
+      <button class="btn btn-sm btn-default header-button">btn2</button>
+    </div>
+  </mb-table>`
 })
 class AppComponent {
   public tableSettings = {

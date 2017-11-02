@@ -23,56 +23,56 @@
     <button class="btn btn-default btn-sm" (click)="commitBatchChange()"><span class="glyphicon glyphicon-ok"></span> Zmień</button>
     <button class="btn btn-default btn-sm" (click)="cancelBatchChange()"><span class="glyphicon glyphicon-remove"></span> Anuluj</button>
   </ng-container>
-  <div *ngIf="isPaginationEnabled" class="pagination-description pull-right">
-    Stron: {{numberOfPages}}<br>
-    Rekordów: {{filteredSource.length}}
-  </div>
-  <div *ngIf="isPaginationEnabled" class="input-group pagination-bar pull-right">
-    <div class="input-group-btn">
-      <button
+  <div class="pull-right right-buttons">
+    <div class="btn-group" role="group">
+      <button *ngIf="isFiltrationEnabled"
         class="btn btn-sm btn-default"
-        [disabled]="selectedPage == 0"
-        (click)="changePage(0)">
-        <span class="glyphicon glyphicon-fast-backward"></span>
-      </button>
-      <button
-        class="btn btn-sm btn-default"
-        [disabled]="selectedPage == 0"
-        (click)="changePage(selectedPage - 1)">
-        <span class="glyphicon glyphicon-backward"></span>
-      </button>
+        (click)="toggleFiltration()"
+        [class.active]="isFiltrationActive">Filtruj</button>
+      <button *ngIf="showResetSortButton"
+        class="btn btn-sm btn-default" (click)="resetSort()">Przywróć sort.</button>
     </div>
-    <input
-      type="text"
-      class="form-control input-sm"
-      [ngModel]="selectedPageTextValue"
-      (ngModelChange)="changePageFromText($event)">
-    <div class="input-group-btn">
-      <button
-        class="btn btn-sm btn-default"
-        [disabled]="selectedPage == numberOfPages - 1"
-        (click)="changePage(selectedPage + 1)">
-        <span class="glyphicon glyphicon-forward"></span>
-      </button>
-      <button
-        class="btn btn-sm btn-default"
-        [disabled]="selectedPage == numberOfPages - 1"
-        (click)="changePage(numberOfPages - 1)">
-        <span class="glyphicon glyphicon-fast-forward"></span>
-      </button>
+    <div *ngIf="isPaginationEnabled" class="input-group pagination-bar">
+      <div class="input-group-btn">
+        <button
+          class="btn btn-sm btn-default"
+          [disabled]="selectedPage == 0"
+          (click)="changePage(0)">
+          <span class="glyphicon glyphicon-fast-backward"></span>
+        </button>
+        <button
+          class="btn btn-sm btn-default"
+          [disabled]="selectedPage == 0"
+          (click)="changePage(selectedPage - 1)">
+          <span class="glyphicon glyphicon-backward"></span>
+        </button>
+      </div>
+      <input
+        type="text"
+        class="form-control input-sm"
+        [ngModel]="selectedPageTextValue"
+        (ngModelChange)="changePageFromText($event)">
+      <div class="input-group-btn">
+        <button
+          class="btn btn-sm btn-default"
+          [disabled]="selectedPage == numberOfPages - 1"
+          (click)="changePage(selectedPage + 1)">
+          <span class="glyphicon glyphicon-forward"></span>
+        </button>
+        <button
+          class="btn btn-sm btn-default"
+          [disabled]="selectedPage == numberOfPages - 1"
+          (click)="changePage(numberOfPages - 1)">
+          <span class="glyphicon glyphicon-fast-forward"></span>
+        </button>
+      </div>
+    </div>
+    <div *ngIf="isPaginationEnabled" class="pagination-description">
+      Stron: {{numberOfPages}}<br>
+      Rekordów: {{filteredSource.length}}
     </div>
   </div>
-  <div class="btn-group pull-right" role="group">
-    <button *ngIf="isFiltrationEnabled"
-    class="btn btn-sm btn-default"
-    (click)="toggleFiltration()"
-    [class.active]="isFiltrationActive">Filtruj</button>
-    <button *ngIf="showResetSortButton"
-      class="btn btn-sm btn-default" (click)="resetSort()">Przywróć sort.</button>
-  </div>
-  <button *ngFor="let button of settings.headerButtons"
-    class="btn btn-sm btn-default pull-right header-button"
-    (click)="button.clickAction()">{{button.text | async}}</button>
+  <ng-content select="[table-header-end]"></ng-content>
 </div> 
 <table class="mb-table table table-striped table-hover">
   <thead>

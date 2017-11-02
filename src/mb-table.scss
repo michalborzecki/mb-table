@@ -13,7 +13,7 @@
 .mb-table-toolbar {
   width: 100%;
   .pull-right, .pull-left {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
   }
   .pull-left {
     margin-right: 0.5em;
@@ -76,15 +76,25 @@ table.mb-table {
   }
 }
 
+.input-group {
+  display: inline-table;
+  vertical-align: middle;
+
+  .input-group-addon,
+  .input-group-btn, {
+      width: auto !important;
+  }
+}
+
 .pagination-description {
+  display: inline-block;
+  vertical-align: middle;
   font-size: 8pt;
   text-align: center;
-  margin-left: 1em;
 }
 
 .pagination-bar {
   width: 13em;
-  margin-left: 1em;
   input {
     text-align: center;
   }
@@ -93,6 +103,6 @@ table.mb-table {
   }
 }
 
-.header-button {
-  margin-right: 1em;
+.right-buttons {
+  margin-left: 0.25em;
 }
