@@ -28,7 +28,6 @@ class AppComponent {
         title: 'Age',
       },
     ],
-    headerButtons: [],
   };
   public tableData = [
     {
