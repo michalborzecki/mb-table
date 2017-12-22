@@ -11,7 +11,7 @@ import { MbTableModule } from 'mb-table';
 @Component({
   selector: 'app',
   template: `
-  <mb-table [settings]="tableSettings" [source]="tableData">
+  <mb-table [settings]="tableSettings" [columns]="tableColumns" [source]="tableData">
     <div class="pull-right" table-header-end>
       <button class="btn btn-sm btn-default header-button">btn1</button>
       <button class="btn btn-sm btn-default header-button">btn2</button>
@@ -19,29 +19,26 @@ import { MbTableModule } from 'mb-table';
   </mb-table>`
 })
 class AppComponent {
-  public tableSettings = {
-    columns: [
-      {
-        id: 'lastName',
-        title: 'Last name',
-      },
-      {
-        id: 'firstName',
-        title: 'First name',
-      },
-      {
-        id: 'age',
-        title: 'Age',
-      },
-    ],
-  };
-  public tableData = [
+  public tableSettings = {};
+  public tableColumns = [
     {
+      id: 'lastName',
+      title: 'Last name',
+    },
+    {
+      id: 'firstName',
+      title: 'First name',
+    },
+    {
+      id: 'age',
+      title: 'Age',
+    },
+  ];
+  public tableData = Array(1000).fill({
       lastName: 'aaa',
       firstName: 'bbb',
       age: 12,
-    }
-  ];
+    });
 }
 
 @NgModule({

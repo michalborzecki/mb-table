@@ -78,17 +78,18 @@
   <thead>
     <tr>
       <th
-        *ngFor="let column of columns"
+        *ngFor="let column of _columns; let columnIndex = index"
         (click)="sortByColumn(column)"
         [class.fixedWidth]="column.width != undefined"
         [style.width]="column.width != undefined ? column.width : 'initial'"
+        class="header-{{columnIndex}}"
         >{{column.title | async}}&nbsp;<span class="glyphicon"
           [class.glyphicon-triangle-bottom]="column.sort.direction == -1"
           [class.glyphicon-triangle-top]="column.sort.direction == 1"></span>
         </th>
     </tr>
     <tr *ngIf="isFiltrationEnabled">
-      <td *ngFor="let column of columns"
+      <td *ngFor="let column of _columns"
         [ngSwitch]="column.filter.type">
         <ng-container *ngIf="column.isFilterable">
           <input *ngSwitchCase="'autocomplete'" type="text"
@@ -122,7 +123,7 @@
       [class.selected]="selectedRows.indexOf(row) > -1" 
       [class.batchChangeRow]="batchChangeRow == row"
       class="st-row-{{rowIndex}}">
-      <ng-container *ngFor="let column of columns; let i=index">
+      <ng-container *ngFor="let column of _columns; let i=index">
         <ng-container *ngIf="!isRowEdited(row) || !column.isEditable">
           <td [ngSwitch]="column.cellRenderer"
             (dblclick)="edit([row], column)"

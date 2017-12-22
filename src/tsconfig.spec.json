@@ -3,16 +3,12 @@
   "compilerOptions": {
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "outDir": "../out-tsc/spec",
+    "outDir": "../.out-tsc/spec",
     "module": "commonjs",
     "target": "es6",
     "baseUrl": "",
     "types": [
-      "jest",
       "node"
     ]
-  },
-  "files": [
-    "**/*.spec.ts"
-  ]
+  }
 }

@@ -41,9 +41,10 @@ const enum NumberFilterOperator {
 export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChecked {
   @Input() settings: any;
   @Input() source: any[];
+  @Input() columns: any[];
   @Input() sortConfiguration: any[];
 
-  columns: any[] = [];
+  _columns: any[] = [];
   columnsSortOrder: any[] = [];
 
   isDuplicationEnabled = true;
@@ -244,7 +245,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
 
     dynamicThs.css('width', widthPerDynamicTh + 'px');
     thead.css('padding-right', scrollWidth + 'px');
-    this.columns.forEach((column, index) => {
+    this._columns.forEach((column, index) => {
       column.calculatedWidth = ths.eq(index).css('width');
     });
     // at the beginning tbody is hidden to not show totally
@@ -265,7 +266,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
     if (this.editorToFocus.row !== null) {
       const editor = $(this.elementRef.nativeElement).find(
         'tr.st-row-' + this.processedSource.indexOf(this.editorToFocus.row) +
-        ' td.st-col-' + this.columns.indexOf(this.editorToFocus.column) + ' input');
+        ' td.st-col-' + this._columns.indexOf(this.editorToFocus.column) + ' input');
       this.editorToFocus.row = this.editorToFocus.column = null;
       setTimeout(() => {
         editor.focus();
@@ -276,8 +277,10 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
 
   ngOnChanges(changes: SimpleChanges) {
     for (const propName of Object.keys(changes)) {
-      if (propName === 'settings') {
+      if (propName === 'columns') {
         this.prepareColumns();
+      }
+      if (propName === 'settings') {
         this.prepareSettings();
       }
       if (propName === 'source') {
@@ -293,14 +296,14 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
   }
 
   private prepareColumns(): void {
-    this.columns = [];
-    this.settings.columns.forEach(column => {
+    this._columns = [];
+    this.columns.forEach(column => {
       let internalColumn = Object.assign({}, column);
       internalColumn.originColumn = column;
       this.prepareColumn(internalColumn, this.settings);
-      this.columns.push(internalColumn);
+      this._columns.push(internalColumn);
     });
-    this.columnsSortOrder = this.columns.slice(0);
+    this.columnsSortOrder = this._columns.slice(0);
   }
 
   private prepareColumn(column: any, settings: any): void {
@@ -442,7 +445,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
     this.isBatchChangeEnabled = (this.settings.isBatchChangeEnabled !== false) && this.isEditionEnabled;
     this.isFiltrationEnabled = this.settings.isFiltrationEnabled !== false;
     if (!this.isFiltrationEnabled) {
-      this.columns.forEach(column => column.isFilterable = false);
+      this._columns.forEach(column => column.isFilterable = false);
     }
 
     this.isPaginationEnabled = !!this.settings.pageSize;
@@ -457,14 +460,14 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
     if (typeof this.sortConfiguration !== 'object') {
       return;
     }
-    this.columns.forEach(c => c.sort.direction = 0);
+    this._columns.forEach(c => c.sort.direction = 0);
     const sortedColumns = this.sortConfiguration.map(columnSort => {
-      const column = this.columns[columnSort.index];
+      const column = this._columns[columnSort.index];
       column.sort.direction = columnSort.direction;
       return column;
     });
     this.columnsSortOrder = sortedColumns.concat(
-      this.columns.filter(c => sortedColumns.indexOf(c) === -1)
+      this._columns.filter(c => sortedColumns.indexOf(c) === -1)
     );
     this.refreshGrid(GridRefreshSteps.SORT);
   }
@@ -524,10 +527,10 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
   }
 
   public resetSort(): void {
-    this.columns.forEach(c => c.sort.direction = 0);
+    this._columns.forEach(c => c.sort.direction = 0);
     this.columnsSortOrder = [];
     this.defaultSortConfiguration.forEach(conf => {
-      const column = this.columns[conf.index];
+      const column = this._columns[conf.index];
       column.sort.direction = conf.direction;
       this.columnsSortOrder.push(column);
     });
@@ -550,7 +553,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
 
   private performFilter(source: any[]): any[] {
     if (this.isFiltrationActive) {
-      return this.columns
+      return this._columns
         .filter(column => column.filter.query !== '')
         .reduce((filtered, column) =>
           filtered.filter((row) =>
@@ -564,7 +567,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
 
   public toggleFiltration(): void {
     if (this.isFiltrationActive) {
-      this.columns.forEach(column => {
+      this._columns.forEach(column => {
         if (column.textFilterFormControl) {
           column.textFilterFormControl.reset({
             value: column.textFilterFormControl.value,
@@ -573,7 +576,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
         }
       });
     } else {
-      this.columns.forEach(column => {
+      this._columns.forEach(column => {
         if (column.textFilterFormControl) {
           column.textFilterFormControl.reset({
             value: column.textFilterFormControl.value,
@@ -652,12 +655,12 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
       return;
     }
     this.editorToFocus.row = rows[0];
-    this.editorToFocus.column = column ? column : this.columns[0];
+    this.editorToFocus.column = column ? column : this._columns[0];
     rows.forEach(row => {
       if (this.editedRows.filter(r => r.original === row).length === 0) {
         this.editedRows.push({
           original: row,
-          values: this.columns.map(c => {
+          values: this._columns.map(c => {
               return { value: c.isEditable ? this.getCellValue(row, c) : row[c.id] };
           })
         });
@@ -678,7 +681,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
   public batchChange(row: any): void {
     this.batchChangeRow = row;
     this.selectedRows = this.selectedRows.filter(r => r !== row);
-    this.batchChangeColumnsSelection = Array.apply(null, new Array(this.columns.length)).map(() => false);
+    this.batchChangeColumnsSelection = Array.apply(null, new Array(this._columns.length)).map(() => false);
   }
 
   public commitBatchChange(): void {
@@ -689,7 +692,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
         if (!isSelected) {
           return;
         }
-        let column = this.columns[columnIndex];
+        let column = this._columns[columnIndex];
         let value = this.getCellValue(this.batchChangeRow, column);
         rowsToChange.forEach((row) => {
           column.editor.valueApplyFunction.call(null, value, row);
@@ -720,7 +723,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
     let editedRows = rows !== undefined ? rows.map(row => this._findRowInEdited(row)) : this.editedRows;
     editedRows.forEach(editedRow => {
       let duplicate = Object.assign({}, editedRow.original);
-      this.columns.forEach((c, index) => {
+      this._columns.forEach((c, index) => {
         c.editor.valueApplyFunction.call(null, editedRow.values[index].value, duplicate);
       });
       this.editCommitFunction(this.createdRows.indexOf(editedRow.original) === -1 ? editedRow.original : null, duplicate).then(() => {

@@ -30,6 +30,7 @@ Desktop.ini
 
 # Build files
 dist/*
+.out-tsc
 
 # Playground tmp files
 .playground
