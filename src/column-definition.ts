@@ -1,20 +1,32 @@
-import {
-  BehaviorSubject,
-  Subject,
-} from 'rxjs/Rx';
+import { BehaviorSubject } from 'rxjs/Rx';
 
 /**
  * Column definition class that is used by table component to setup data processing and displaying.
  */
 export class ColumnDefinition {
-  private titleSubject: Subject<string> = new BehaviorSubject('');
-  private valueSubject: Subject<(record: any) => any> = new BehaviorSubject((record) => '');
+  /**
+   * Source used while creating definition object.
+   * @type {ColumnDefinitionSource}
+   */
+  public readonly columnDefinitionSource?: ColumnDefinitionSource;
+
+  /**
+   * Subject with column title string.
+   * @type {BehaviorSubject<string>}
+   */
+  private titleSubject: BehaviorSubject<string> = new BehaviorSubject('');
+
+  /**
+   * Subject with function that calculates cell value for column.
+   * @type {BehaviorSubject<(record: any) => any>}
+   */
+  private valueSubject: BehaviorSubject<(record: any) => any> = new BehaviorSubject((record) => '');
 
   /**
    * Column header.
    * @type {Subject<string>}
    */
-  get title(): Subject<string> {
+  get title(): BehaviorSubject<string> {
     return this.titleSubject;
   }
 
@@ -22,7 +34,7 @@ export class ColumnDefinition {
    * Function that calculates cell value for column.
    * @type {(record: any) => any}
    */
-  get value(): Subject<(record: any) => any> {
+  get value(): BehaviorSubject<(record: any) => any> {
     return this.valueSubject;
   }
 
@@ -32,6 +44,7 @@ export class ColumnDefinition {
    */
   constructor(columnDefinitionSource?: ColumnDefinitionSource) {
     if (columnDefinitionSource) {
+      this.columnDefinitionSource = columnDefinitionSource;
       this.mergeDefinitionObject(columnDefinitionSource);
     }
   }
@@ -47,8 +60,8 @@ export class ColumnDefinition {
       const title = columnDefinitionSource.title;
       if (typeof title === 'string') {
         this.titleSubject.next(title);
-      } else if (title instanceof Subject) {
-        this.titleSubject = title as Subject<string>;
+      } else if (title instanceof BehaviorSubject) {
+        this.titleSubject = title as BehaviorSubject<string>;
       }
     }
     if (columnDefinitionSource.value) {
@@ -57,8 +70,8 @@ export class ColumnDefinition {
         this.valueSubject.next((record) => record[value]);
       } else if (typeof value === 'function') {
         this.valueSubject.next(value);
-      } else if (value instanceof Subject) {
-        this.valueSubject = value as Subject<(record: any) => any>;
+      } else if (value instanceof BehaviorSubject) {
+        this.valueSubject = value as BehaviorSubject<(record: any) => any>;
       }
     }
   }
@@ -72,11 +85,11 @@ export class ColumnDefinitionSource {
    * Column header.
    * @type {string | Subject<string>}
    */
-  public title: string | Subject<string>;
+  public title?: string | BehaviorSubject<string>;
 
   /**
    * Function that calculates cell value for column.
-   * @type {string | ((record: any) => any) | Subject<(record: any) => any>}
+   * @type {string | ((record: any) => any) | BehaviorSubject<(record: any) => any>}
    */
-  public value: string | ((record: any) => any) | Subject<(record: any) => any>;
+  public value?: string | ((record: any) => any) | BehaviorSubject<(record: any) => any>;
 }

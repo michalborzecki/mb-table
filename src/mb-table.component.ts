@@ -11,7 +11,6 @@ import {
   ElementRef,
 } from '@angular/core';
 import { FormControl } from '@angular/forms';
-import { Observable } from 'rxjs/Rx';
 import $ from 'jquery';
 import elementResizeDetector from 'element-resize-detector';
 

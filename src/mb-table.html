@@ -135,10 +135,10 @@
               type="checkbox"
               [(ngModel)]="batchChangeColumnsSelection[i]">
             <ng-container *ngSwitchCase="'checkbox'">
-              <span *ngIf="getCellValue(row, column)" class="glyphicon glyphicon-ok"></span>
+              <span *ngIf="(column.value | async)(row)" class="glyphicon glyphicon-ok"></span>
             </ng-container>
             <ng-container *ngSwitchDefault>
-              {{getCellValue(row, column)}}
+              {{(column.value | async)(row)}}
             </ng-container>
           </td>
         </ng-container>
