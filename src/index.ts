@@ -5,19 +5,20 @@ import { NguiAutoCompleteModule } from '@ngui/auto-complete';
 import { MbTableComponent } from './mb-table.component';
 
 export * from './mb-table.component';
+export * from './column-definition';
 
 @NgModule({
   imports: [
     CommonModule,
     NguiAutoCompleteModule,
     FormsModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
   ],
   declarations: [
-    MbTableComponent
+    MbTableComponent,
   ],
   exports: [
-    MbTableComponent
+    MbTableComponent,
   ]
 })
 export class MbTableModule {

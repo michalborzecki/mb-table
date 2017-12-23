@@ -298,18 +298,13 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
   private prepareColumns(): void {
     this._columns = [];
     this.columns.forEach(column => {
-      let internalColumn = Object.assign({}, column);
-      internalColumn.originColumn = column;
-      this.prepareColumn(internalColumn, this.settings);
-      this._columns.push(internalColumn);
+      this.prepareColumn(column, this.settings);
+      this._columns.push(column);
     });
     this.columnsSortOrder = this._columns.slice(0);
   }
 
   private prepareColumn(column: any, settings: any): void {
-    if (typeof column.title === 'string') {
-      column.title = Observable.of(column.title);
-    }
     column.calculatedWidth = 0;
     if (!column.cellRenderer) {
       column.cellRenderer = 'text';
@@ -507,10 +502,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
   }
 
   public getCellValue(row: any, column: any): any {
-    if (column.valuePrepareFunction === undefined) {
-      return row[column.id];
-    }
-    return column.valuePrepareFunction(row[column.id], row);
+    return column.value.getValue()(row);
   }
 
   public getCellStyleClasses(row: any, column: any): any {

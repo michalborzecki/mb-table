@@ -3,22 +3,22 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NguiAutoCompleteModule } from '@ngui/auto-complete';
 import { MbTableComponent } from './mb-table.component';
 import { Component, Input } from '@angular/core';
-import { BehaviorSubject } from 'rxjs/BehaviorSubject';
+import { ColumnDefinition } from './column-definition';
 
-function getColumns() {
+function getColumns(): ColumnDefinition[] {
   return [
-    {
-      id: 'lastName',
-      title: new BehaviorSubject('Last name'),
-    },
-    {
-      id: 'firstName',
-      title: new BehaviorSubject('First name'),
-    },
-    {
-      id: 'age',
-      title: new BehaviorSubject('Age'),
-    },
+    new ColumnDefinition({
+      title: 'Last Name',
+      value: 'lastName',
+    }),
+    new ColumnDefinition({
+      title: 'First Name',
+      value: 'firstName',
+    }),
+    new ColumnDefinition({
+      title: 'Age',
+      value: 'age',
+    }),
   ];
 }
 
@@ -29,7 +29,7 @@ function getColumns() {
 })
 class TestHostComponent {
   @Input() settings: any = {};
-  @Input() columns: any[] = [];
+  @Input() columns: ColumnDefinition[] = [];
   @Input() source: any[] = [];
 }
 

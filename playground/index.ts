@@ -6,7 +6,7 @@ import { NgModule } from '@angular/core';
 import { Component } from '@angular/core';
 import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 
-import { MbTableModule } from 'mb-table';
+import { MbTableModule, ColumnDefinition } from 'mb-table';
 
 @Component({
   selector: 'app',
@@ -21,18 +21,18 @@ import { MbTableModule } from 'mb-table';
 class AppComponent {
   public tableSettings = {};
   public tableColumns = [
-    {
-      id: 'lastName',
-      title: 'Last name',
-    },
-    {
-      id: 'firstName',
-      title: 'First name',
-    },
-    {
-      id: 'age',
+    new ColumnDefinition({
+      title: 'Last Name',
+      value: 'lastName',
+    }),
+    new ColumnDefinition({
+      title: 'First Name',
+      value: 'firstName',
+    }),
+    new ColumnDefinition({
       title: 'Age',
-    },
+      value: 'age',
+    }),
   ];
   public tableData = Array(1000).fill({
       lastName: 'aaa',
