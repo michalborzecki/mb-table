@@ -177,6 +177,99 @@ describe('MbTableComponent', () => {
         .toBe(String(column.value.getValue()(source[0])))
     );
   });
+
+  it('uses column class names provided as strings', () => {
+    const columns = [
+      new ColumnDefinition({ classNames: 'class1' }),
+      new ColumnDefinition({ classNames: 'class2' }),
+      new ColumnDefinition({ classNames: 'class3' }),
+    ];
+    const source = [{
+      lastName: 'lastname',
+      firstName: 'firstname',
+      age: 10,
+    }];
+    component.columns = columns;
+    component.source = source;
+    fixture.detectChanges();
+    columns.forEach((column, index) => {
+      const className = column.columnDefinitionSource.classNames as string;
+      expect(getCellElement(nativeElement, index, 0).classList.contains(className))
+        .toBe(true);
+    });
+  });
+
+  it('uses column class names provided as functions', () => {
+    const columns = [
+      new ColumnDefinition({ classNames: (record) => record['firstName'] + '-class1' }),
+      new ColumnDefinition({ classNames: (record) => record['lastName'] + '-class2' }),
+      new ColumnDefinition({ classNames: (record) => record['age'] + '-class3' }),
+    ];
+    const source = [{
+      lastName: 'lastname',
+      firstName: 'firstname',
+      age: 10,
+    }];
+    component.columns = columns;
+    component.source = source;
+    fixture.detectChanges();
+    columns.forEach((column, index) => {
+      const className = column.columnDefinitionSource.classNames as (record: any) => any;
+      expect(getCellElement(nativeElement, index, 0).classList.contains(className(source[0])))
+        .toBe(true);
+    });
+  });
+
+  it('uses column class names provided as function subject', () => {
+    const columns = [
+      new ColumnDefinition({ classNames: new BehaviorSubject((record) => record['firstName'] + '-class1') }),
+      new ColumnDefinition({ classNames: new BehaviorSubject((record) => record['lastName'] + '-class2') }),
+      new ColumnDefinition({ classNames: new BehaviorSubject((record) => record['age'] + '-class3') }),
+    ];
+    const source = [{
+      lastName: 'lastname',
+      firstName: 'firstname',
+      age: 10,
+    }];
+    component.columns = columns;
+    component.source = source;
+    fixture.detectChanges();
+    columns.forEach((column, index) => {
+      const className =
+        (column.columnDefinitionSource.classNames as BehaviorSubject<(record: any) => any>)
+        .getValue();
+      expect(getCellElement(nativeElement, index, 0).classList.contains(className(source[0])))
+        .toBe(true);
+    });
+  });
+
+  it('reacts to column class names function change', () => {
+    const columns = [
+      new ColumnDefinition({ classNames: 'class1' }),
+      new ColumnDefinition({ classNames: 'class2' }),
+      new ColumnDefinition({ classNames: 'class3' }),
+    ];
+    const source = [{
+      lastName: 'lastname',
+      firstName: 'firstname',
+      age: 10,
+    }];
+    component.columns = columns;
+    component.source = source;
+    fixture.detectChanges();
+    columns[0].classNames.next((record) => record['firstName'] + '-class1');
+    columns[1].classNames.next((record) => record['lastName'] + '-class2');
+    columns[2].classNames.next((record) => record['age'] + '-class3');
+    fixture.detectChanges();
+    columns.forEach((column, index) => {
+      const className = column.classNames.getValue();
+      const cell = getCellElement(nativeElement, index, 0);
+      expect(cell.classList.contains(className(source[0])))
+        .toBe(true);
+      expect(cell.classList.contains(column.columnDefinitionSource.classNames as string))
+        .toBe(false);
+    });
+  });
 });
 
 function compareColumnsName(nativeElement, columns) {

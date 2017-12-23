@@ -127,7 +127,7 @@
         <ng-container *ngIf="!isRowEdited(row) || !column.isEditable">
           <td [ngSwitch]="column.cellRenderer"
             (dblclick)="edit([row], column)"
-            [class]="getCellStyleClasses(row, column)"
+            [class]="(column.classNames | async)(row)"
             (click)="selectRow(row, $event)"
             [style.minWidth]="column.calculatedWidth"
             [style.maxWidth]="column.calculatedWidth">
@@ -145,7 +145,7 @@
         <td
           *ngIf="isRowEdited(row) && column.isEditable"
           [ngSwitch]="column.editor.type"
-          [class]="getCellStyleClasses(row, column) + ' st-col-' + i"
+          [class]="(column.classNames | async)(row) + ' st-col-' + i"
           (click)="selectRow(row, $event)"
           [style.minWidth]="column.calculatedWidth"
           [style.maxWidth]="column.calculatedWidth">

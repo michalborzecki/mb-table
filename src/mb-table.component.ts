@@ -308,12 +308,6 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
     if (!column.cellRenderer) {
       column.cellRenderer = 'text';
     }
-    if (typeof column.class === 'string') {
-      let classes = column.class;
-      column.class = () => classes;
-    } else if (typeof column.class !== 'function') {
-      column.class = () => '';
-    }
     column.isEditable = column.isEditable === undefined ? true : !!column.isEditable;
     if (!column.editor) {
       column.editor = {};
@@ -502,10 +496,6 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
 
   public getCellValue(row: any, column: any): any {
     return column.value.getValue()(row);
-  }
-
-  public getCellStyleClasses(row: any, column: any): any {
-    return column.class.call(null, this.getCellValue(row, column), row);
   }
 
   public sortByColumn(column: any): void {
