@@ -302,6 +302,7 @@ describe('MbTableComponent', () => {
     component.configuration = new TableConfiguration({ filterEnabled: false });
     whenStable(fixture).then(() => {
       expect(getFilterRow(fixture)).toBeNull();
+      expect(getRowsElements(fixture).length).toBe(2);
       done();
     });
   });
@@ -338,6 +339,7 @@ describe('MbTableComponent', () => {
     component.configuration = new TableConfiguration({ filterEnabled: new BehaviorSubject(false) });
     whenStable(fixture).then(() => {
       expect(getFilterRow(fixture)).toBeNull();
+      expect(getRowsElements(fixture).length).toBe(2);
       done();
     });
   });
@@ -362,6 +364,96 @@ describe('MbTableComponent', () => {
       filterEnabled.next(false);
       fixture.autoDetectChanges();
       expect(getFilterRow(fixture)).toBeNull();
+      expect(getRowsElements(fixture).length).toBe(2);
+      done();
+    });
+  });
+
+  it('[column filter] hides filter if column.filterEnabled=false', (done) => {
+    const columns = [
+      new ColumnDefinition({
+        value: 'lastName',
+        filterEnabled: false,
+        filterDebounceTime: 1,
+        filterQuery: 'de',
+      }),
+    ];
+    const source = [
+      { lastName: 'abc' },
+      { lastName: 'def' },
+    ];
+    component.columns = columns;
+    component.source = source;
+    whenStable(fixture).then(() => {
+      expect(getFilterInputElement(fixture, 0, columns[0])).toBeNull();
+      expect(getRowsElements(fixture).length).toBe(2);
+      done();
+    });
+  });
+
+  it('[column filter] shows filter if column.filterEnabled=true', (done) => {
+    const columns = [
+      new ColumnDefinition({
+        value: 'lastName',
+        filterEnabled: true,
+        filterDebounceTime: 1,
+        filterQuery: 'de',
+      }),
+    ];
+    const source = [
+      { lastName: 'abc' },
+      { lastName: 'def' },
+    ];
+    component.columns = columns;
+    component.source = source;
+    whenStable(fixture).then(() => {
+      expect(getFilterInputElement(fixture, 0, columns[0])).toBeTruthy();
+      done();
+    });
+  });
+
+  it('[column filter] hides filter if subject column.filterEnabled contains false', (done) => {
+    const columns = [
+      new ColumnDefinition({
+        value: 'lastName',
+        filterEnabled: new BehaviorSubject(false),
+        filterDebounceTime: 1,
+        filterQuery: 'de',
+      }),
+    ];
+    const source = [
+      { lastName: 'abc' },
+      { lastName: 'def' },
+    ];
+    component.columns = columns;
+    component.source = source;
+    whenStable(fixture).then(() => {
+      expect(getFilterInputElement(fixture, 0, columns[0])).toBeNull();
+      expect(getRowsElements(fixture).length).toBe(2);
+      done();
+    });
+  });
+
+  it('[column filter] hides filter if subject column.filterEnabled changes false', (done) => {
+    const filterEnabled = new BehaviorSubject(true);
+    const columns = [
+      new ColumnDefinition({
+        value: 'lastName',
+        filterEnabled: filterEnabled,
+        filterDebounceTime: 1,
+        filterQuery: 'de',
+      }),
+    ];
+    const source = [
+      { lastName: 'abc' },
+      { lastName: 'def' },
+    ];
+    component.columns = columns;
+    component.source = source;
+    whenStable(fixture).then(() => {
+      filterEnabled.next(false);
+      fixture.autoDetectChanges();
+      expect(getFilterInputElement(fixture, 0, columns[0])).toBeNull();
       expect(getRowsElements(fixture).length).toBe(2);
       done();
     });

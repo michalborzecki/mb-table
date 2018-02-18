@@ -81,22 +81,8 @@ export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, After
       }
     );
 
-  private lastSortChangedColumn: BehaviorSubject<ColumnDefinition> = new BehaviorSubject(undefined);
+  private lastSortChangedColumn: Subject<ColumnDefinition> = new Subject();
   private resetSortButtonClick: Subject<Event> = new Subject();
-  private columnsFilterConfiguration = this.columns.switchMap(columns => {
-    const queryObservables = Observable.combineLatest(...columns.map(column => column.filterQuery));
-    const functionObservables = Observable.combineLatest(...columns.map(column => column.filterFunction));
-    return Observable.combineLatest(
-      queryObservables,
-      functionObservables,
-      (queries, functions) => columns.map((column, index) => ({
-        column,
-        query: queries[index] as string,
-        filterFunction: functions[index] as (record: any, column: ColumnDefinition) => boolean, // TODO remove as
-      }))
-    );
-  });
-  // columnsSortOrder: any[] = [];
 
   isDuplicationEnabled = true;
   isEditionEnabled = true;
@@ -122,14 +108,17 @@ export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, After
   private filteredSource: Observable<any[]> = Observable.combineLatest(
     this.configuration.switchMap(c => c.filterEnabled),
     this.source,
-    this.columnsFilterConfiguration,
-    (filterEnabled, source, columnsFilterConfiguration) => {
+    this.columns.switchMap(columns => columns.length ?
+      Observable.combineLatest(...columns.map(c => c.filterConfigurationChanged)) :
+      Observable.of([])
+    ),
+    (filterEnabled, source, columns) => {
       if (filterEnabled) {
-        return columnsFilterConfiguration
-          .filter(({ query }) => query !== '')
-          .reduce((filtered, columnConf) =>
+        return columns
+          .filter(c => c.filterEnabled.getValue() && c.filterQuery.getValue() !== '')
+          .reduce((filtered, c) =>
             filtered.filter(record =>
-                columnConf.filterFunction(record, columnConf.column)
+                c.filterFunction.getValue()(record, c)
             ), source.slice(0));
       } else {
         return source.slice(0);
@@ -375,7 +364,6 @@ export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, After
     //   column.sort.comparator = (val1, val2) => MbTableComponent.compare(val1, val2);
     // }
 
-    column.isFilterable = column.isFilterable !== false;
     // column.filterQuery.subscribe(() => this.refreshGrid());
   }
 

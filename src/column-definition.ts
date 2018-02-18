@@ -42,6 +42,11 @@ export class ColumnDefinition {
   private classNamesSubject: BehaviorSubject<(record: any) => any> = new BehaviorSubject((record) => '');
 
   /**
+   * Subject with flag, that indicates whether filtration should be enabled or not.
+   */
+  private filterEnabledSubject: BehaviorSubject<boolean> = new BehaviorSubject(true);
+
+  /**
    * Subject with column filter renderer type.
    * @type {BehaviorSubject<CellRenderer>}
    */
@@ -85,6 +90,12 @@ export class ColumnDefinition {
   public readonly filterFormControl: FormControl = new FormControl();
 
   /**
+   * Observable that is used as an event emitter when any of the filter
+   * settings has changed.
+   */
+  public readonly filterConfigurationChanged: Observable<ColumnDefinition>;
+
+  /**
    * Subject with function that is used while sorting to compare two records.
    * @type {BehaviorSubject<(recordA: any, recordB: any, column: ColumnDefinition) => number>}
    */
@@ -122,6 +133,13 @@ export class ColumnDefinition {
    */
   get classNames(): BehaviorSubject<(record: any) => any> {
     return this.classNamesSubject;
+  }
+
+  /**
+   * Subject with flag, that indicates whether filtration should be enabled or not.
+   */
+  get filterEnabled(): BehaviorSubject<boolean> {
+    return this.filterEnabledSubject;
   }
 
   /**
@@ -194,6 +212,14 @@ export class ColumnDefinition {
     this.prepareFilterFunction();
     this.prepareFilterFormControl();
     this.prepareCheckboxFilterState();
+
+    this.filterConfigurationChanged = Observable.combineLatest(
+      this.filterEnabledSubject,
+      this.filterRendererSubject,
+      this.filterQuerySubject,
+      this.filterFunctionSubject,
+      this.filterDebounceTimeSubject
+    ).mapTo(this);
   }
 
   /**
@@ -244,6 +270,16 @@ export class ColumnDefinition {
         this.classNamesSubject.next(classNames);
       } else if (classNames instanceof BehaviorSubject) {
         this.classNamesSubject = classNames as BehaviorSubject<(record: any) => any>;
+      }
+    }
+
+    // filterEnabled
+    if (columnDefinitionSource.filterEnabled !== undefined) {
+      const filterEnabled = columnDefinitionSource.filterEnabled;
+      if (filterEnabled instanceof BehaviorSubject) {
+        this.filterEnabledSubject = filterEnabled;
+      } else {
+        this.filterEnabledSubject.next(filterEnabled);
       }
     }
 
@@ -381,6 +417,11 @@ export class ColumnDefinitionSource {
    * @type {string | ((record: any) => any) | BehaviorSubject<(record: any) => any>}
    */
   public classNames?: string | ((record: any) => any) | BehaviorSubject<(record: any) => any>;
+
+  /**
+   * Subject with flag, that indicates whether filtration should be enabled or not.
+   */
+  public filterEnabled?: boolean | BehaviorSubject<boolean>;
 
   /**
    * Column filter renderer. May be a CellRenderer or BehaviorSubject with CellRenderer.

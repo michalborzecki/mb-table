@@ -95,7 +95,7 @@
       <td *ngFor="let column of (columns | async); let columnIndex = index"
         [ngSwitch]="column.filterRenderer | async"
         class="filter-{{columnIndex}}">
-        <ng-container *ngIf="column.isFilterable">
+        <ng-container *ngIf="column.filterEnabled | async">
           <input *ngSwitchCase="CellRenderer.Checkbox"
             type="checkbox"
             [ngModel]="column.checkboxFilterChecked | async"
