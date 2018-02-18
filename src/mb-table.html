@@ -80,18 +80,18 @@
       <th
         *ngFor="let column of (columns | async); let columnIndex = index"
         (click)="lastSortChangedColumn.next(column)"
+        class="header-{{columnIndex}}"
         [class.sort-descending]="(columnsSortDirection | async).get(column) == SortDirection.Descending"
         [class.sort-ascending]="(columnsSortDirection | async).get(column) == SortDirection.Ascending"
         [class.sort-default]="(columnsSortDirection | async).get(column) == SortDirection.Default"
         [class.fixedWidth]="column.width != undefined"
         [style.width]="column.width != undefined ? column.width : 'initial'"
-        class="header-{{columnIndex}}"
         >{{column.title | async}}&nbsp;<span class="glyphicon"
           [class.glyphicon-triangle-bottom]="(columnsSortDirection | async).get(column) == SortDirection.Descending"
           [class.glyphicon-triangle-top]="(columnsSortDirection | async).get(column) == SortDirection.Ascending"></span>
         </th>
     </tr>
-    <tr *ngIf="isFiltrationEnabled">
+    <tr *ngIf="((configuration | async).filterEnabled | async)" class="filter-row">
       <td *ngFor="let column of (columns | async); let columnIndex = index"
         [ngSwitch]="column.filterRenderer | async"
         class="filter-{{columnIndex}}">

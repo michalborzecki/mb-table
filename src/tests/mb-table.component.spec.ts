@@ -6,7 +6,7 @@ import { Component, Input } from '@angular/core';
 import { ColumnDefinition } from '../column-definition';
 import { BehaviorSubject } from 'rxjs/Rx';
 import { CellRenderer } from '../cell-renderer';
-import { getCellElement, getHeaderElement, getFilterInputElement, getRowsElements } from './helpers/element';
+import { getCellElement, getHeaderElement, getFilterInputElement, getRowsElements, getFilterRow } from './helpers/element';
 import { fillIn, toggleCheckbox } from './helpers/input';
 import { SortAlgorithm, SortDirection, ColumnSortState } from '../sort/sort-algorithm';
 import { MultiColumnSort } from '../sort/multi-column-sort';
@@ -282,6 +282,88 @@ describe('MbTableComponent', () => {
         .toBe(true);
       expect(cell.classList.contains(column.columnDefinitionSource.classNames as string))
         .toBe(false);
+    });
+  });
+
+  it('[column filter] hides filters if filterEnabled=false', (done) => {
+    const columns = [
+      new ColumnDefinition({
+        value: 'lastName',
+        filterDebounceTime: 1,
+        filterQuery: 'de',
+      }),
+    ];
+    const source = [
+      { lastName: 'abc' },
+      { lastName: 'def' },
+    ];
+    component.columns = columns;
+    component.source = source;
+    component.configuration = new TableConfiguration({ filterEnabled: false });
+    whenStable(fixture).then(() => {
+      expect(getFilterRow(fixture)).toBeNull();
+      done();
+    });
+  });
+
+  it('[column filter] shows filters if filterEnabled=true', () => {
+    const columns = [
+      new ColumnDefinition({ value: 'lastName' }),
+    ];
+    const source = [
+      { lastName: 'abc' },
+      { lastName: 'def' },
+    ];
+    component.columns = columns;
+    component.source = source;
+    component.configuration = new TableConfiguration({ filterEnabled: true });
+    fixture.autoDetectChanges();
+    expect(getFilterRow(fixture)).toBeTruthy();
+  });
+
+  it('[column filter] hides filters if subject filterEnabled contains false', (done) => {
+    const columns = [
+      new ColumnDefinition({
+        value: 'lastName',
+        filterDebounceTime: 1,
+        filterQuery: 'de',
+      }),
+    ];
+    const source = [
+      { lastName: 'abc' },
+      { lastName: 'def' },
+    ];
+    component.columns = columns;
+    component.source = source;
+    component.configuration = new TableConfiguration({ filterEnabled: new BehaviorSubject(false) });
+    whenStable(fixture).then(() => {
+      expect(getFilterRow(fixture)).toBeNull();
+      done();
+    });
+  });
+
+  it('[column filter] hides filters if subject filterEnabled changes to false', (done) => {
+    const columns = [
+      new ColumnDefinition({
+        value: 'lastName',
+        filterDebounceTime: 1,
+        filterQuery: 'de',
+      }),
+    ];
+    const source = [
+      { lastName: 'abc' },
+      { lastName: 'def' },
+    ];
+    component.columns = columns;
+    component.source = source;
+    const filterEnabled = new BehaviorSubject(true);
+    component.configuration = new TableConfiguration({ filterEnabled });
+    whenStable(fixture).then(() => {
+      filterEnabled.next(false);
+      fixture.autoDetectChanges();
+      expect(getFilterRow(fixture)).toBeNull();
+      expect(getRowsElements(fixture).length).toBe(2);
+      done();
     });
   });
 
@@ -794,16 +876,16 @@ describe('MbTableComponent', () => {
     fixture.autoDetectChanges();
 
     const headerElement = getHeaderElement(fixture, 0);
-    expect(headerElement.classList.contains('sort-default'));
+    expect(headerElement.classList.contains('sort-default')).toBeTruthy();
     headerElement.click();
     whenStable(fixture).then(() => {
-      expect(headerElement.classList.contains('sort-ascending'));
+      expect(headerElement.classList.contains('sort-ascending')).toBeTruthy();
       headerElement.click();
       whenStable(fixture).then(() => {
-        expect(headerElement.classList.contains('sort-descending'));
+        expect(headerElement.classList.contains('sort-descending')).toBeTruthy();
         headerElement.click();
         whenStable(fixture).then(() => {
-          expect(headerElement.classList.contains('sort-default'));
+          expect(headerElement.classList.contains('sort-default')).toBeTruthy();
           done();
         });
       });

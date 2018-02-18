@@ -78,8 +78,9 @@ export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, After
           return [column, sortState ? sortState.direction : SortDirection.Default] as [ColumnDefinition, SortDirection];
         });
         return new Map(mapSource);
-      })
-    .startWith(new Map());
+      }
+    );
+
   private lastSortChangedColumn: BehaviorSubject<ColumnDefinition> = new BehaviorSubject(undefined);
   private resetSortButtonClick: Subject<Event> = new Subject();
   private columnsFilterConfiguration = this.columns.switchMap(columns => {
@@ -101,7 +102,6 @@ export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, After
   isEditionEnabled = true;
   isDeletionEnabled = true;
   isBatchChangeEnabled = true;
-  isFiltrationEnabled = true;
   isRowsSelectionEnabled = false;
   deselectRowOnClick = false;
   isFiltrationActive = true;
@@ -120,16 +120,21 @@ export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, After
    * Source data after filtration.
    */
   private filteredSource: Observable<any[]> = Observable.combineLatest(
+    this.configuration.switchMap(c => c.filterEnabled),
     this.source,
     this.columnsFilterConfiguration,
-    (source, columnsFilterConfiguration) =>
-      columnsFilterConfiguration
-        .filter(({ query }) => query !== '')
-        .reduce((filtered, columnConf) =>
-          filtered.filter(record =>
-              columnConf.filterFunction(record, columnConf.column)
-          ), source.slice(0))
-  );
+    (filterEnabled, source, columnsFilterConfiguration) => {
+      if (filterEnabled) {
+        return columnsFilterConfiguration
+          .filter(({ query }) => query !== '')
+          .reduce((filtered, columnConf) =>
+            filtered.filter(record =>
+                columnConf.filterFunction(record, columnConf.column)
+            ), source.slice(0));
+      } else {
+        return source.slice(0);
+      }
+  });
 
   /**
    * Filtered source data after sorting.
@@ -400,10 +405,6 @@ export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, After
     this.isEditionEnabled = this.settings.isEditionEnabled !== false;
     this.isDeletionEnabled = this.settings.isDeletionEnabled !== false;
     this.isBatchChangeEnabled = (this.settings.isBatchChangeEnabled !== false) && this.isEditionEnabled;
-    this.isFiltrationEnabled = this.settings.isFiltrationEnabled !== false;
-    if (!this.isFiltrationEnabled) {
-      this.columns.getValue().forEach(column => column.isFilterable = false);
-    }
 
     this.isPaginationEnabled = !!this.settings.pageSize;
     this.pageSize = this.settings.pageSize;

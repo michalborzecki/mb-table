@@ -12,14 +12,26 @@ export class TableConfiguration {
   private tableConfigurationSource?: TableConfigurationSource;
 
   /**
+   * Subject with flag, that indicates whether filtration should be enabled or not.
+   */
+  private filterEnabledSubject: BehaviorSubject<boolean> = new BehaviorSubject(true);
+
+  /**
    * Subject with sort algorithm.
    */
   private sortAlgorithmSubject: BehaviorSubject<SortAlgorithm> = new BehaviorSubject(new MultiColumnSort());
 
   /**
+   * Subject with flag, that indicates whether filtration should be enabled or not.
+   */
+  public get filterEnabled(): BehaviorSubject<boolean> {
+    return this.filterEnabledSubject;
+  }
+
+  /**
    * Subject with sort algorithm.
    */
-  get sortAlgorithm(): BehaviorSubject<SortAlgorithm> {
+  public get sortAlgorithm(): BehaviorSubject<SortAlgorithm> {
     return this.sortAlgorithmSubject;
   }
 
@@ -40,13 +52,23 @@ export class TableConfiguration {
    * can be more generic.
    */
   private mergeConfigurationObject(tableConfigurationSource: TableConfigurationSource) {
+    // filterEnabled
+    if (tableConfigurationSource.filterEnabled !== undefined) {
+      const filterEnabled = tableConfigurationSource.filterEnabled;
+      if (filterEnabled instanceof BehaviorSubject) {
+        this.filterEnabledSubject = filterEnabled;
+      } else {
+        this.filterEnabledSubject.next(filterEnabled);
+      }
+    }
+
     // sortAlgorithm
     if (tableConfigurationSource.sortAlgorithm !== undefined) {
       const sortAlgorithm = tableConfigurationSource.sortAlgorithm;
       if (sortAlgorithm instanceof BehaviorSubject) {
-        this.sortAlgorithmSubject = sortAlgorithm as BehaviorSubject<SortAlgorithm>;
+        this.sortAlgorithmSubject = sortAlgorithm;
       } else {
-        this.sortAlgorithmSubject.next(sortAlgorithm as SortAlgorithm);
+        this.sortAlgorithmSubject.next(sortAlgorithm);
       }
     }
   }
@@ -57,7 +79,12 @@ export class TableConfiguration {
  */
 export class TableConfigurationSource {
   /**
-   * Sort algorithm or subject with it.
+   * Flag that indicates whether filtration should be enabled or not.
+   */
+  public filterEnabled?: boolean | BehaviorSubject<boolean>;
+
+  /**
+   * Sort algorithm.
    */
   public sortAlgorithm?: SortAlgorithm | BehaviorSubject<SortAlgorithm>;
 }

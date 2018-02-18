@@ -11,6 +11,10 @@ export function getHeaderElement(fixture: ComponentFixture<any>, columnIndex: nu
   return fixture.nativeElement.querySelector(`thead .header-${columnIndex}`) as HTMLElement;
 }
 
+export function getFilterRow(fixture: ComponentFixture<any>): HTMLElement {
+  return fixture.nativeElement.querySelector('thead .filter-row') as HTMLElement;
+}
+
 export function getFilterElement(fixture: ComponentFixture<any>, columnIndex: number): HTMLElement {
   return fixture.nativeElement.querySelector(`thead .filter-${columnIndex}`) as HTMLElement;
 }
