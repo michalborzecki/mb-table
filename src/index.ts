@@ -6,6 +6,7 @@ import { MbTableComponent } from './mb-table.component';
 
 export * from './mb-table.component';
 export * from './column-definition';
+export * from './cell-renderer';
 
 @NgModule({
   imports: [

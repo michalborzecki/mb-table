@@ -30,6 +30,7 @@ Desktop.ini
 **/*.ngfactory.ts
 
 # Build files
+build
 dist/*
 .out-tsc
 .tmp

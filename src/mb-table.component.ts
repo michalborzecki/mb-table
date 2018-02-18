@@ -8,12 +8,16 @@ import {
   AfterViewChecked,
   NgZone,
   OnChanges,
+  OnInit,
   ElementRef,
 } from '@angular/core';
-import { FormControl } from '@angular/forms';
 import $ from 'jquery';
 import elementResizeDetector from 'element-resize-detector';
-
+import { BehaviorSubject, Subject, Observable } from 'rxjs/Rx';
+import { CellRenderer } from './cell-renderer';
+import { ColumnDefinition } from './column-definition';
+import { SortDirection, ColumnSortState } from './sort/sort-algorithm';
+import { TableConfiguration } from './table-configuration';
 
 const enum GridRefreshSteps {
   FILTER,
@@ -22,14 +26,12 @@ const enum GridRefreshSteps {
   NEW_ROW
 }
 
-const enum NumberFilterOperator {
-  EQ,
-  NOT_EQ,
-  LT,
-  LTE,
-  GT,
-  GTE
-}
+const sortDirectionCycle = [
+  SortDirection.Default,
+  SortDirection.Ascending,
+  SortDirection.Descending,
+  SortDirection.Default,
+];
 
 @Component({
   selector: 'mb-table',
@@ -37,14 +39,63 @@ const enum NumberFilterOperator {
   templateUrl: 'mb-table.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChecked {
+export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, AfterViewChecked {
   @Input() settings: any;
-  @Input() source: any[];
-  @Input() columns: any[];
-  @Input() sortConfiguration: any[];
+  @Input('source')
+  get _source(): any[] {
+    return this.source.getValue();
+  };
+  set _source(value: any[]) {
+    this.source.next(value);
+  }
+  @Input('columns')
+  get _columns(): any[] {
+    return this.columns.getValue();
+  };
+  set _columns(value: any[]) {
+    this.columns.next(value);
+  }
+  @Input('configuration')
+  get _configuration(): TableConfiguration {
+    return this.configuration.getValue();
+  };
+  set _configuration(value: TableConfiguration) {
+    this.configuration.next(value);
+  }
+  CellRenderer: typeof CellRenderer = CellRenderer;
+  SortDirection: typeof SortDirection = SortDirection;
 
-  _columns: any[] = [];
-  columnsSortOrder: any[] = [];
+  configuration: BehaviorSubject<TableConfiguration> = new BehaviorSubject(new TableConfiguration());
+  source: BehaviorSubject<any[]> = new BehaviorSubject([]);
+  columns: BehaviorSubject<any[]> = new BehaviorSubject([]);
+  columnsSortDirection: Observable<Map<ColumnDefinition, SortDirection>> =
+    Observable.combineLatest(
+      this.columns,
+      this.configuration.switchMap(c => c.sortAlgorithm).switchMap(s => s.columnsSortState),
+      (columns, columnsSortState) => {
+        const mapSource = columns.map(column => {
+          const sortState = columnsSortState.filter(columnSortState => columnSortState.column === column)[0];
+          return [column, sortState ? sortState.direction : SortDirection.Default] as [ColumnDefinition, SortDirection];
+        });
+        return new Map(mapSource);
+      })
+    .startWith(new Map());
+  private lastSortChangedColumn: BehaviorSubject<ColumnDefinition> = new BehaviorSubject(undefined);
+  private resetSortButtonClick: Subject<Event> = new Subject();
+  private columnsFilterConfiguration = this.columns.switchMap(columns => {
+    const queryObservables = Observable.combineLatest(...columns.map(column => column.filterQuery));
+    const functionObservables = Observable.combineLatest(...columns.map(column => column.filterFunction));
+    return Observable.combineLatest(
+      queryObservables,
+      functionObservables,
+      (queries, functions) => columns.map((column, index) => ({
+        column,
+        query: queries[index] as string,
+        filterFunction: functions[index] as (record: any, column: ColumnDefinition) => boolean, // TODO remove as
+      }))
+    );
+  });
+  // columnsSortOrder: any[] = [];
 
   isDuplicationEnabled = true;
   isEditionEnabled = true;
@@ -57,7 +108,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
 
   showCreateButton = true;
   showResetSortButton = true;
-  defaultSortConfiguration: any[] = [];
+  // defaultSortConfiguration: any[] = [];
 
   isPaginationEnabled = false;
   pageSize = 0;
@@ -65,10 +116,32 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
   selectedPageTextValue = '1';
   numberOfPages = 1;
 
-  filteredSource: any[] = [];
-  sortedSource: any[] = [];
-  paginatedSource: any[] = [];
-  processedSource: any[] = [];
+  /**
+   * Source data after filtration.
+   */
+  private filteredSource: Observable<any[]> = Observable.combineLatest(
+    this.source,
+    this.columnsFilterConfiguration,
+    (source, columnsFilterConfiguration) =>
+      columnsFilterConfiguration
+        .filter(({ query }) => query !== '')
+        .reduce((filtered, columnConf) =>
+          filtered.filter(record =>
+              columnConf.filterFunction(record, columnConf.column)
+          ), source.slice(0))
+  );
+
+  /**
+   * Filtered source data after sorting.
+   */
+  private sortedSource: Observable<any[]> = Observable.combineLatest(
+    this.configuration.switchMap(c => c.sortAlgorithm).switchMap(s => s.configurationChanged),
+    this.filteredSource,
+    (sortAlgorithm, filteredSource) => sortAlgorithm.sort(filteredSource)
+  );
+
+  paginatedSource: Observable<any[]> = this.sortedSource.map(arr => arr.slice(0));
+  processedSource: Observable<any[]> = this.paginatedSource.map(arr => arr.slice(0));
   editedRows: any[] = [];
   createdRows: any = [];
   selectedRows: any[] = [];
@@ -90,137 +163,79 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
 
   private tableWidthOld = 0;
 
-  protected static compare = (a, b) => {
-    // if a is empty
-    if (!a && a !== 0) {
-      if (!b && b !== 0) { // empty equals empty
-        return 0;
-      }
-      return -1; // empty is always lower than sth
-    } else if (!b && b !== 0) { // if b is empty (and a is not)
-      return 1;
-    } else { // a and b are not empty
-      // special case for strings comparison
-      if (typeof a === 'string' && typeof b === 'string') {
-        // bugfix for utf-8 characters sorting
-        return a.localeCompare(b);
-      } else {
-        if (a < b) {
-          return -1;
-        }
-        if (a > b) {
-          return 1;
-        }
-        return 0;
-      }
-    }
-  }
+  // protected static compare = (a, b) => {
+  //   // if a is empty
+  //   if (!a && a !== 0) {
+  //     if (!b && b !== 0) { // empty equals empty
+  //       return 0;
+  //     }
+  //     return -1; // empty is always lower than sth
+  //   } else if (!b && b !== 0) { // if b is empty (and a is not)
+  //     return 1;
+  //   } else { // a and b are not empty
+  //     // special case for strings comparison
+  //     if (typeof a === 'string' && typeof b === 'string') {
+  //       // bugfix for utf-8 characters sorting
+  //       return a.localeCompare(b);
+  //     } else {
+  //       if (a < b) {
+  //         return -1;
+  //       }
+  //       if (a > b) {
+  //         return 1;
+  //       }
+  //       return 0;
+  //     }
+  //   }
+  // }
 
-  private static compareNumbers(num1: number, num2: number, operator: NumberFilterOperator) {
-    switch (operator) {
-      case NumberFilterOperator.EQ:
-        return num1 === num2;
-      case NumberFilterOperator.NOT_EQ:
-        return num1 !== num2;
-      case NumberFilterOperator.LT:
-        return num1 < num2;
-      case NumberFilterOperator.LTE:
-        return num1 <= num2;
-      case NumberFilterOperator.GT:
-        return num1 > num2;
-      case NumberFilterOperator.GTE:
-        return num1 >= num2;
-    }
-  }
+  // private static stableSort(arr, cmpFunc) {
+  //   let arrOfWrapper = arr.map(function(elem, idx){
+  //       return {elem: elem, idx: idx};
+  //   });
 
-  protected static nonStrictFilter = (value: any, search: any) => {
-    search = search ? search.toString().trim() : '';
-    if (search === '""') {
-      return !value && value !== 0;
-    } else if (search.length === 0) {
-      return true;
-    } else if (!value && value !== 0) {
-      return false;
-    }
-    return value.toString().trim().toLowerCase().includes(
-      search.toString().trim().toLowerCase());
-  }
+  //   arrOfWrapper.sort(function(wrapperA, wrapperB){
+  //       let cmpDiff = cmpFunc(wrapperA.elem, wrapperB.elem);
+  //       return cmpDiff === 0
+  //            ? wrapperA.idx - wrapperB.idx
+  //            : cmpDiff;
+  //   });
 
-  protected static strictFilter = (value: any, search: any) => {
-    return value === search;
-  }
-
-  protected static numberFilter = (value: number, search: string) => {
-    search = search ? search.toString().trim() : '';
-    if (search === '""') {
-      return !value && value !== 0;
-    } else if (search.length === 0) {
-      return true;
-    } else if (!value && value !== 0) {
-      return false;
-    }
-    let operator: NumberFilterOperator;
-    let searchNumber: number;
-    if (search.length > 2) {
-      switch (search.substring(0, 2)) {
-        case '==':
-          operator = NumberFilterOperator.EQ;
-          break;
-        case '!=':
-          operator = NumberFilterOperator.NOT_EQ;
-          break;
-        case '<=':
-          operator = NumberFilterOperator.LTE;
-          break;
-        case '>=':
-          operator = NumberFilterOperator.GTE;
-          break;
-      }
-      searchNumber = Number(search.substring(2));
-    }
-    if (search.length > 1 && operator === undefined) {
-      switch (search.substring(0, 1)) {
-        case '<':
-          operator = NumberFilterOperator.LT;
-          break;
-        case '>':
-          operator = NumberFilterOperator.GT;
-          break;
-      }
-      searchNumber = Number(search.substring(1));
-    }
-    if (operator === undefined) {
-      operator = NumberFilterOperator.EQ;
-      searchNumber = Number(search);
-    }
-    if (isNaN(searchNumber)) {
-      return false;
-    } else {
-      return MbTableComponent.compareNumbers(value, searchNumber, operator);
-    }
-  }
-
-  private static stableSort(arr, cmpFunc) {
-    let arrOfWrapper = arr.map(function(elem, idx){
-        return {elem: elem, idx: idx};
-    });
-
-    arrOfWrapper.sort(function(wrapperA, wrapperB){
-        let cmpDiff = cmpFunc(wrapperA.elem, wrapperB.elem);
-        return cmpDiff === 0
-             ? wrapperA.idx - wrapperB.idx
-             : cmpDiff;
-    });
-
-    return arrOfWrapper.map(function(wrapper){
-        return wrapper.elem;
-    });
-  }
+  //   return arrOfWrapper.map(function(wrapper){
+  //       return wrapper.elem;
+  //   });
+  // }
 
   constructor(
     private elementRef: ElementRef,
     private changeDetectorRef: ChangeDetectorRef,
-    private zone: NgZone) { }
+    private zone: NgZone
+  ) { }
+
+  ngOnInit(): void {
+    this.setupColumnSortChangeHandler();
+    this.setupSortResetHandler();
+  }
+
+  private setupColumnSortChangeHandler(): void {
+    this.lastSortChangedColumn
+      .withLatestFrom(this.configuration.switchMap(c => c.sortAlgorithm))
+      .withLatestFrom(this.columnsSortDirection)
+      .subscribe(([[column, sortAlgorithm], columnsSortDirection]) => {
+        const actualDirection = columnsSortDirection.get(column);
+        if (actualDirection === undefined) {
+          return;
+        }
+        let nextDirection = sortDirectionCycle[sortDirectionCycle.indexOf(actualDirection) + 1];
+        sortAlgorithm.applyColumnSort(new ColumnSortState(column, nextDirection));
+    });
+  }
+
+  private setupSortResetHandler(): void {
+    this.resetSortButtonClick
+      .withLatestFrom(this.configuration.switchMap(c => c.sortAlgorithm))
+      .subscribe(([, sortAlgorithm]) => sortAlgorithm.resetSort());
+  }
 
   setupColumnsWidth() {
     const table = $(this.elementRef.nativeElement);
@@ -244,7 +259,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
 
     dynamicThs.css('width', widthPerDynamicTh + 'px');
     thead.css('padding-right', scrollWidth + 'px');
-    this._columns.forEach((column, index) => {
+    this.columns.getValue().forEach((column, index) => {
       column.calculatedWidth = ths.eq(index).css('width');
     });
     // at the beginning tbody is hidden to not show totally
@@ -262,45 +277,43 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
   }
 
   ngAfterViewChecked() {
-    if (this.editorToFocus.row !== null) {
-      const editor = $(this.elementRef.nativeElement).find(
-        'tr.st-row-' + this.processedSource.indexOf(this.editorToFocus.row) +
-        ' td.st-col-' + this._columns.indexOf(this.editorToFocus.column) + ' input');
-      this.editorToFocus.row = this.editorToFocus.column = null;
-      setTimeout(() => {
-        editor.focus();
-        editor.select();
-      }, 10);
-    }
+    // if (this.editorToFocus.row !== null) {
+    //   const editor = $(this.elementRef.nativeElement).find(
+    //     'tr.st-row-' + this.processedSource.indexOf(this.editorToFocus.row) +
+    //     ' td.st-col-' + this.columns.getValue().indexOf(this.editorToFocus.column) + ' input');
+    //   this.editorToFocus.row = this.editorToFocus.column = null;
+    //   setTimeout(() => {
+    //     editor.focus();
+    //     editor.select();
+    //   }, 10);
+    // }
   }
 
   ngOnChanges(changes: SimpleChanges) {
     for (const propName of Object.keys(changes)) {
-      if (propName === 'columns') {
+      if (propName === '_columns') {
         this.prepareColumns();
       }
       if (propName === 'settings') {
         this.prepareSettings();
       }
-      if (propName === 'source') {
-        this.refreshGrid();
-        this.editedRows = this.editedRows
-          .filter(r => this.processedSource.concat(this.createdRows).indexOf(r.original) !== -1);
-        this.changePage(this.selectedPage);
-      }
-      if (propName === 'sortConfiguration') {
-        this.refreshSortConfiguration();
-      }
+      // if (propName === 'source') {
+      //   this.refreshGrid();
+      //   this.editedRows = this.editedRows
+      //     .filter(r => this.processedSource.concat(this.createdRows).indexOf(r.original) !== -1);
+      //   this.changePage(this.selectedPage);
+      // }
+      // if (propName === 'sortConfiguration') {
+      //   this.refreshSortConfiguration();
+      // }
     }
   }
 
   private prepareColumns(): void {
-    this._columns = [];
-    this.columns.forEach(column => {
+    this.columns.getValue().forEach(column => {
       this.prepareColumn(column, this.settings);
-      this._columns.push(column);
     });
-    this.columnsSortOrder = this._columns.slice(0);
+    // this.columnsSortOrder = this.columns.getValue().slice(0);
   }
 
   private prepareColumn(column: any, settings: any): void {
@@ -313,15 +326,16 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
       column.editor = {};
     }
     if (!column.editor.type) {
-      switch (column.cellRenderer) {
-        case 'number':
-        case 'checkbox':
-        case 'text':
-          column.editor.type = column.cellRenderer;
+      switch (column.renderer.getValue()) {
+        case CellRenderer.Number:
+          column.editor.type = 'number';
           break;
-        case undefined:
-        default:
+        case CellRenderer.Checkbox:
+          column.editor.type = 'checkbox';
+          break;
+        case CellRenderer.Text:
           column.editor.type = 'text';
+          break;
       }
     }
     if (!column.editor.source) {
@@ -348,61 +362,16 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
       }
     }
 
-    if (!column.filter) {
-      column.filter = {};
-    }
-    if (!column.filter.type) {
-      switch (column.cellRenderer) {
-        case 'number':
-        case 'checkbox':
-        case 'text':
-          column.filter.type = column.cellRenderer;
-          break;
-        case undefined:
-        default:
-          column.filter.type = 'text';
-      }
-    }
-    if (!column.filter.source) {
-      column.filter.source = () => [];
-    }
-    if (!column.filter.filterFunction) {
-      switch (column.filter.type) {
-        case 'text':
-          column.filter.filterFunction =
-            (value, search, row) => MbTableComponent.nonStrictFilter(value, search);
-          break;
-        case 'autocomplete':
-        case 'checkbox':
-          column.filter.filterFunction =
-            (value, search, row) => MbTableComponent.strictFilter(value, search);
-          break;
-        case 'number':
-          column.filter.filterFunction =
-            (value, search, row) => MbTableComponent.numberFilter(value, search);
-      }
-    }
-    column.filter.query = '';
-
-    if (!column.sort) {
-      column.sort = {};
-    };
-    column.sort.direction = 0;
-    if (!column.sort.comparator) {
-      column.sort.comparator = (val1, val2) => MbTableComponent.compare(val1, val2);
-    }
+    // if (!column.sort) {
+    //   column.sort = {};
+    // };
+    // column.sort.direction = 0;
+    // if (!column.sort.comparator) {
+    //   column.sort.comparator = (val1, val2) => MbTableComponent.compare(val1, val2);
+    // }
 
     column.isFilterable = column.isFilterable !== false;
-
-    if (column.filter.type === 'text' || column.filter.type === 'number') {
-      column.textFilterFormControl = new FormControl();
-      column.textFilterFormControl.valueChanges
-        .distinctUntilChanged()
-        .debounceTime(300)
-        .subscribe((value: string) => {
-          this.refreshGrid();
-        });
-    }
+    // column.filterQuery.subscribe(() => this.refreshGrid());
   }
 
   private prepareSettings(): void {
@@ -411,7 +380,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
       (row) => Object.assign({}, row);
     this.deleteCommitFunction = this.settings.deleteCommitFunction ?
       this.settings.deleteCommitFunction :
-      (row) => this.source = this.source.filter(e => e !== row);
+      (row) => this.source.next(this.source.getValue().filter(e => e !== row));
     this.editCommitFunction = this.settings.editCommitFunction ?
       this.settings.editCommitFunction :
       (row, newRow) => {
@@ -433,141 +402,140 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
     this.isBatchChangeEnabled = (this.settings.isBatchChangeEnabled !== false) && this.isEditionEnabled;
     this.isFiltrationEnabled = this.settings.isFiltrationEnabled !== false;
     if (!this.isFiltrationEnabled) {
-      this._columns.forEach(column => column.isFilterable = false);
+      this.columns.getValue().forEach(column => column.isFilterable = false);
     }
 
     this.isPaginationEnabled = !!this.settings.pageSize;
     this.pageSize = this.settings.pageSize;
     this.showCreateButton = this.settings.showCreateButton !== false;
     this.showResetSortButton = this.settings.showResetSortButton !== false;
-    this.defaultSortConfiguration = !!this.settings.defaultSortConfiguration ?
-      this.settings.defaultSortConfiguration : [];
+    // this.defaultSortConfiguration = !!this.settings.defaultSortConfiguration ?
+    //   this.settings.defaultSortConfiguration : [];
   }
 
-  private refreshSortConfiguration(): void {
-    if (typeof this.sortConfiguration !== 'object') {
-      return;
-    }
-    this._columns.forEach(c => c.sort.direction = 0);
-    const sortedColumns = this.sortConfiguration.map(columnSort => {
-      const column = this._columns[columnSort.index];
-      column.sort.direction = columnSort.direction;
-      return column;
-    });
-    this.columnsSortOrder = sortedColumns.concat(
-      this._columns.filter(c => sortedColumns.indexOf(c) === -1)
-    );
-    this.refreshGrid(GridRefreshSteps.SORT);
-  }
+  // private refreshSortConfiguration(): void {
+  //   if (typeof this.sortConfiguration !== 'object') {
+  //     return;
+  //   }
+  //   this.columns.getValue().forEach(c => c.sort.direction = 0);
+  //   const sortedColumns = this.sortConfiguration.map(columnSort => {
+  //     const column = this._columns[columnSort.index];
+  //     column.sort.direction = columnSort.direction;
+  //     return column;
+  //   });
+  //   this.columnsSortOrder = sortedColumns.concat(
+  //     this.columns.getValue().filter(c => sortedColumns.indexOf(c) === -1)
+  //   );
+  //   this.refreshGrid(GridRefreshSteps.SORT);
+  // }
 
-  private refreshGrid(fromStep: GridRefreshSteps = GridRefreshSteps.FILTER) {
-    let processedSource;
-    switch (fromStep) {
-      case GridRefreshSteps.FILTER:
-        processedSource = this.filteredSource = this.performFilter(this.source);
-        /* falls through */
-      case GridRefreshSteps.SORT:
-        processedSource = this.sortedSource = this.performSort(this.filteredSource);
-        /* falls through */
-      case GridRefreshSteps.PAGINATION:
-        if (this.isPaginationEnabled) {
-          this.numberOfPages = Math.max(Math.floor(this.sortedSource.length / this.pageSize), 1);
-          if (this.numberOfPages * this.pageSize < this.sortedSource.length) {
-            this.numberOfPages++;
-          }
-          this.selectedPage = Math.min(this.selectedPage, this.numberOfPages - 1);
-          processedSource = this.paginatedSource = this.performPagination(this.sortedSource);
-        } else {
-          processedSource = this.paginatedSource = this.sortedSource.slice(0);
-        }
-        /* falls through */
-      case GridRefreshSteps.NEW_ROW:
-        processedSource = this.paginatedSource.slice(0);
-        if (this.createdRows.length > 0) {
-          processedSource = this.createdRows.concat(processedSource);
-        }
-        /* falls through */
-      default:
-        this.processedSource = processedSource;
-        this.changeDetectorRef.markForCheck();
-        return;
-    }
-  }
+  // private refreshGrid(fromStep: GridRefreshSteps = GridRefreshSteps.FILTER) {
+  //   let processedSource;
+  //   switch (fromStep) {
+  //     case GridRefreshSteps.FILTER:
+  //       processedSource = this.filteredSource = this.performFilter(this.source);
+  //       /* falls through */
+  //     case GridRefreshSteps.SORT:
+  //       processedSource = this.sortedSource = this.performSort(this.filteredSource);
+  //       /* falls through */
+  //     case GridRefreshSteps.PAGINATION:
+  //       if (this.isPaginationEnabled) {
+  //         this.numberOfPages = Math.max(Math.floor(this.sortedSource.length / this.pageSize), 1);
+  //         if (this.numberOfPages * this.pageSize < this.sortedSource.length) {
+  //           this.numberOfPages++;
+  //         }
+  //         this.selectedPage = Math.min(this.selectedPage, this.numberOfPages - 1);
+  //         processedSource = this.paginatedSource = this.performPagination(this.sortedSource);
+  //       } else {
+  //         processedSource = this.paginatedSource = this.sortedSource.slice(0);
+  //       }
+  //       /* falls through */
+  //     case GridRefreshSteps.NEW_ROW:
+  //       processedSource = this.paginatedSource.slice(0);
+  //       if (this.createdRows.length > 0) {
+  //         processedSource = this.createdRows.concat(processedSource);
+  //       }
+  //       /* falls through */
+  //     default:
+  //       this.processedSource = processedSource;
+  //       this.changeDetectorRef.markForCheck();
+  //       return;
+  //   }
+  // }
 
   public getCellValue(row: any, column: any): any {
     return column.value.getValue()(row);
   }
 
-  public sortByColumn(column: any): void {
-    // cycle values -1, 0, 1
-    column.sort.direction = (column.sort.direction + 2) % 3 - 1;
-    this.columnsSortOrder = this.columnsSortOrder
-      .filter(c => c !== column)
-      .concat([column]);
-    this.refreshGrid(GridRefreshSteps.SORT);
-  }
+  // public sortByColumn(column: any): void {
+  //   this.lastSortChangedColumn.next(column);
+    // // cycle values -1, 0, 1
+    // column.sort.direction = (column.sort.direction + 2) % 3 - 1;
+    // this.columnsSortOrder = this.columnsSortOrder
+    //   .filter(c => c !== column)
+    //   .concat([column]);
+    // this.refreshGrid(GridRefreshSteps.SORT);
+  // }
 
-  public resetSort(): void {
-    this._columns.forEach(c => c.sort.direction = 0);
-    this.columnsSortOrder = [];
-    this.defaultSortConfiguration.forEach(conf => {
-      const column = this._columns[conf.index];
-      column.sort.direction = conf.direction;
-      this.columnsSortOrder.push(column);
-    });
-    this.refreshGrid(GridRefreshSteps.SORT);
-  }
+  // public resetSort(): void {
+  //   this.columns.getValue().forEach(c => c.sort.direction = 0);
+  //   this.columnsSortOrder = [];
+  //   this.defaultSortConfiguration.forEach(conf => {
+  //     const column = this.columns.getValue()[conf.index];
+  //     column.sort.direction = conf.direction;
+  //     this.columnsSortOrder.push(column);
+  //   });
+  //   this.refreshGrid(GridRefreshSteps.SORT);
+  // }
 
-  private performSort(source: any[]): any[] {
-    return this.columnsSortOrder
-      .filter(column => column.sort.direction !== 0)
-      .reduce((sorted, column) =>
-        MbTableComponent.stableSort(sorted, (a, b) =>
-          column.sort.comparator.call(null,
-            this.getCellValue(a, column),
-            this.getCellValue(b, column),
-            a,
-            b
-          ) * column.sort.direction
-        ), source.slice(0));
-  }
+  // private performSort(source: any[]): any[] {
+  //   return this.columnsSortOrder
+  //     .filter(column => column.sort.direction !== 0)
+  //     .reduce((sorted, column) =>
+  //       MbTableComponent.stableSort(sorted, (a, b) =>
+  //         column.sort.comparator.call(null,
+  //           a,
+  //           b,
+  //           column,
+  //         ) * column.sort.direction
+  //       ), source.slice(0));
+  // }
 
-  private performFilter(source: any[]): any[] {
-    if (this.isFiltrationActive) {
-      return this._columns
-        .filter(column => column.filter.query !== '')
-        .reduce((filtered, column) =>
-          filtered.filter((row) =>
-            column.filter.filterFunction.call(null,
-              this.getCellValue(row, column), column.filter.query, row)
-        ), source.slice(0));
-    } else {
-      return this.source.slice(0);
-    }
-  }
+  // private performFilter(source: any[]): any[] {
+  //   if (this.isFiltrationActive) {
+  //     return this.columns.getValue()
+  //       .filter(column => column.filterQuery.getValue() !== '')
+  //       .reduce((filtered, column) =>
+  //         filtered.filter((row) =>
+  //           column.filterFunction.getValue()(row, column)
+  //       ), source.slice(0));
+  //   } else {
+  //     return this.source.slice(0);
+  //   }
+  // }
 
   public toggleFiltration(): void {
     if (this.isFiltrationActive) {
-      this._columns.forEach(column => {
-        if (column.textFilterFormControl) {
-          column.textFilterFormControl.reset({
-            value: column.textFilterFormControl.value,
+      this.columns.getValue().forEach(column => {
+        // if (column.textFilterFormControl) {
+          column.filterFormControl.reset({
+            value: column.filterFormControl.value,
             disabled: true
           });
-        }
+        // }
       });
     } else {
-      this._columns.forEach(column => {
-        if (column.textFilterFormControl) {
-          column.textFilterFormControl.reset({
-            value: column.textFilterFormControl.value,
+      this.columns.getValue().forEach(column => {
+        // if (column.textFilterFormControl) {
+          column.filterFormControl.reset({
+            value: column.filterFormControl.value,
             disabled: false
           });
-        }
+        // }
       });
     }
     this.isFiltrationActive = !this.isFiltrationActive;
-    this.refreshGrid(GridRefreshSteps.FILTER);
+    // this.refreshGrid(GridRefreshSteps.FILTER);
   }
 
   private performPagination(source: any[]): any[] {
@@ -583,7 +551,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
     }
     this.selectedPage = pageNumber;
     this.selectedPageTextValue = (pageNumber + 1).toString();
-    this.refreshGrid(GridRefreshSteps.PAGINATION);
+    // this.refreshGrid(GridRefreshSteps.PAGINATION);
   }
 
   public changePageFromText(textNumber): void {
@@ -593,55 +561,55 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
     }
   }
 
-  public selectRow(row: any, event: MouseEvent): void {
-    if (!this.isRowsSelectionEnabled || row === this.batchChangeRow) {
-      return;
-    }
-    if (event.ctrlKey && !event.shiftKey) {
-      if (this.selectedRows.indexOf(row) === -1) {
-        this.selectedRows.push(row);
-      } else {
-        this.selectedRows = this.selectedRows.filter(r => r !== row);
-      }
-    } else if (!event.ctrlKey && event.shiftKey) {
-      if (this.selectedRows.length === 0) {
-        this.selectedRows = [row];
-      } else {
-        let lastSelectedRow = this.selectedRows[this.selectedRows.length - 1];
-        let lastIndex = this.processedSource.indexOf(lastSelectedRow);
-        let newIndex = this.processedSource.indexOf(row);
-        let newRowsSelection = this.processedSource.slice(
-          Math.min(lastIndex, newIndex), Math.max(lastIndex, newIndex) + 1);
-        let selectedRowsWithoutNew = this.selectedRows.filter(r => newRowsSelection.indexOf(r) === -1);
-        if (selectedRowsWithoutNew.length + newRowsSelection.length === this.selectedRows.length) {
-          this.selectedRows = selectedRowsWithoutNew;
-        } else {
-          this.selectedRows = selectedRowsWithoutNew
-            .concat(lastIndex <= newIndex ? newRowsSelection : newRowsSelection.reverse());
-        }
-        window.getSelection().removeAllRanges();
-      }
-    } else {
-      if (this.selectedRows.length > 1 || this.selectedRows.length === 0) {
-        this.selectedRows = [row];
-      } else if (this.deselectRowOnClick || this.selectedRows[0] !== row) {
-        this.selectedRows = this.selectedRows[0] === row ? [] : [row];
-      }
-    }
-    this.selectedRowsChanged.call(null, this.selectedRows);
-  }
+  // public selectRow(row: any, event: MouseEvent): void {
+  //   if (!this.isRowsSelectionEnabled || row === this.batchChangeRow) {
+  //     return;
+  //   }
+  //   if (event.ctrlKey && !event.shiftKey) {
+  //     if (this.selectedRows.indexOf(row) === -1) {
+  //       this.selectedRows.push(row);
+  //     } else {
+  //       this.selectedRows = this.selectedRows.filter(r => r !== row);
+  //     }
+  //   } else if (!event.ctrlKey && event.shiftKey) {
+  //     if (this.selectedRows.length === 0) {
+  //       this.selectedRows = [row];
+  //     } else {
+  //       let lastSelectedRow = this.selectedRows[this.selectedRows.length - 1];
+  //       let lastIndex = this.processedSource.indexOf(lastSelectedRow);
+  //       let newIndex = this.processedSource.indexOf(row);
+  //       let newRowsSelection = this.processedSource.slice(
+  //         Math.min(lastIndex, newIndex), Math.max(lastIndex, newIndex) + 1);
+  //       let selectedRowsWithoutNew = this.selectedRows.filter(r => newRowsSelection.indexOf(r) === -1);
+  //       if (selectedRowsWithoutNew.length + newRowsSelection.length === this.selectedRows.length) {
+  //         this.selectedRows = selectedRowsWithoutNew;
+  //       } else {
+  //         this.selectedRows = selectedRowsWithoutNew
+  //           .concat(lastIndex <= newIndex ? newRowsSelection : newRowsSelection.reverse());
+  //       }
+  //       window.getSelection().removeAllRanges();
+  //     }
+  //   } else {
+  //     if (this.selectedRows.length > 1 || this.selectedRows.length === 0) {
+  //       this.selectedRows = [row];
+  //     } else if (this.deselectRowOnClick || this.selectedRows[0] !== row) {
+  //       this.selectedRows = this.selectedRows[0] === row ? [] : [row];
+  //     }
+  //   }
+  //   this.selectedRowsChanged.call(null, this.selectedRows);
+  // }
 
   public edit(rows: any[], column: any = null): void {
     if (!this.isEditionEnabled || (rows.length === 1 && rows[0] === this.batchChangeRow)) {
       return;
     }
     this.editorToFocus.row = rows[0];
-    this.editorToFocus.column = column ? column : this._columns[0];
+    this.editorToFocus.column = column ? column : this.columns.getValue()[0];
     rows.forEach(row => {
       if (this.editedRows.filter(r => r.original === row).length === 0) {
         this.editedRows.push({
           original: row,
-          values: this._columns.map(c => {
+          values: this.columns.getValue().map(c => {
               return { value: c.isEditable ? this.getCellValue(row, c) : row[c.id] };
           })
         });
@@ -656,13 +624,13 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
       this.createdRows.push(newRow);
     });
     this.edit(this.createdRows);
-    this.refreshGrid(GridRefreshSteps.NEW_ROW);
+    // this.refreshGrid(GridRefreshSteps.NEW_ROW);
   }
 
   public batchChange(row: any): void {
     this.batchChangeRow = row;
     this.selectedRows = this.selectedRows.filter(r => r !== row);
-    this.batchChangeColumnsSelection = Array.apply(null, new Array(this._columns.length)).map(() => false);
+    this.batchChangeColumnsSelection = Array.apply(null, new Array(this.columns.getValue().length)).map(() => false);
   }
 
   public commitBatchChange(): void {
@@ -673,7 +641,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
         if (!isSelected) {
           return;
         }
-        let column = this._columns[columnIndex];
+        let column = this.columns.getValue()[columnIndex];
         let value = this.getCellValue(this.batchChangeRow, column);
         rowsToChange.forEach((row) => {
           column.editor.valueApplyFunction.call(null, value, row);
@@ -697,14 +665,14 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
   private create(): void {
     this.createdRows = [Object.assign({}, this.newRowPrototype)];
     this.edit(this.createdRows);
-    this.refreshGrid(GridRefreshSteps.NEW_ROW);
+    // this.refreshGrid(GridRefreshSteps.NEW_ROW);
   }
 
   public commitEdit(rows: any[]): void {
     let editedRows = rows !== undefined ? rows.map(row => this._findRowInEdited(row)) : this.editedRows;
     editedRows.forEach(editedRow => {
       let duplicate = Object.assign({}, editedRow.original);
-      this._columns.forEach((c, index) => {
+      this.columns.getValue().forEach((c, index) => {
         c.editor.valueApplyFunction.call(null, editedRow.values[index].value, duplicate);
       });
       this.editCommitFunction(this.createdRows.indexOf(editedRow.original) === -1 ? editedRow.original : null, duplicate).then(() => {
@@ -747,7 +715,7 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
   private _removeFromEditedRows(rows: any[]): void {
     this.editedRows = this.editedRows.filter(r => rows.indexOf(r.original) === -1);
     this.createdRows = this.createdRows.filter(r => rows.indexOf(r) === -1);
-    this.refreshGrid(GridRefreshSteps.NEW_ROW);
+    // this.refreshGrid(GridRefreshSteps.NEW_ROW);
     this._editionStateChanged();
   }
 
@@ -762,23 +730,19 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
     }
   }
 
-  public checkboxFilterChanged(event: any, column: any): void {
-    const checkbox = event.target;
-    switch (column.filter.query) {
+  public checkboxFilterChanged(column: any): void {
+    switch (column.filterQuery.getValue()) {
       case '':
-        column.filter.query = true;
-        checkbox.indeterminate = false;
+        column.filterQuery.next(true);
         break;
       case true:
-        column.filter.query = false;
-        checkbox.indeterminate = false;
+        column.filterQuery.next(false);
         break;
       case false:
-        column.filter.query = '';
-        checkbox.indeterminate = true;
+        column.filterQuery.next('');
         break;
     }
-    this.refreshGrid(GridRefreshSteps.FILTER);
+    // this.refreshGrid(GridRefreshSteps.FILTER);
   }
 
   public remove(): void {
@@ -787,6 +751,6 @@ export class MbTableComponent implements OnChanges, AfterViewInit, AfterViewChec
     });
     this.selectedRows = [];
     this.selectedRowsChanged.call(null, this.selectedRows);
-    this.refreshGrid(GridRefreshSteps.FILTER);
+    // this.refreshGrid(GridRefreshSteps.FILTER);
   }
 }

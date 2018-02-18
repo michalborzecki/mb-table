@@ -1,0 +1,63 @@
+import { BehaviorSubject } from 'rxjs/Rx';
+import { SortAlgorithm } from './sort/sort-algorithm';
+import { MultiColumnSort } from './sort/multi-column-sort';
+
+/**
+ * Table configuration class that is used to setup table settings.
+ */
+export class TableConfiguration {
+  /**
+   * Source used while creating configuration object.
+   */
+  private tableConfigurationSource?: TableConfigurationSource;
+
+  /**
+   * Subject with sort algorithm.
+   */
+  private sortAlgorithmSubject: BehaviorSubject<SortAlgorithm> = new BehaviorSubject(new MultiColumnSort());
+
+  /**
+   * Subject with sort algorithm.
+   */
+  get sortAlgorithm(): BehaviorSubject<SortAlgorithm> {
+    return this.sortAlgorithmSubject;
+  }
+
+  /**
+   * @param tableConfigurationSource Data source for table configuration.
+   */
+  constructor(tableConfigurationSource?: TableConfigurationSource) {
+    if (tableConfigurationSource) {
+      this.tableConfigurationSource = tableConfigurationSource;
+      this.mergeConfigurationObject(tableConfigurationSource);
+    }
+  }
+
+  /**
+   * Copies data from given object to table configuration.
+   * @param tableConfigurationSource Configuration of the table. Its format
+   * is the same as native TableConfiguration object except that some fields
+   * can be more generic.
+   */
+  private mergeConfigurationObject(tableConfigurationSource: TableConfigurationSource) {
+    // sortAlgorithm
+    if (tableConfigurationSource.sortAlgorithm !== undefined) {
+      const sortAlgorithm = tableConfigurationSource.sortAlgorithm;
+      if (sortAlgorithm instanceof BehaviorSubject) {
+        this.sortAlgorithmSubject = sortAlgorithm as BehaviorSubject<SortAlgorithm>;
+      } else {
+        this.sortAlgorithmSubject.next(sortAlgorithm as SortAlgorithm);
+      }
+    }
+  }
+}
+
+/**
+ * Class that is used as a source for newly created table configuration object.
+ */
+export class TableConfigurationSource {
+  /**
+   * Sort algorithm or subject with it.
+   */
+  public sortAlgorithm?: SortAlgorithm | BehaviorSubject<SortAlgorithm>;
+}

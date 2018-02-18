@@ -30,7 +30,7 @@
         (click)="toggleFiltration()"
         [class.active]="isFiltrationActive">Filtruj</button>
       <button *ngIf="showResetSortButton"
-        class="btn btn-sm btn-default" (click)="resetSort()">Przywróć sort.</button>
+        class="btn btn-sm btn-default reset-sort" (click)="resetSortButtonClick.next($event)">Przywróć sort.</button>
     </div>
     <div *ngIf="isPaginationEnabled" class="input-group pagination-bar">
       <div class="input-group-btn">
@@ -78,54 +78,49 @@
   <thead>
     <tr>
       <th
-        *ngFor="let column of _columns; let columnIndex = index"
-        (click)="sortByColumn(column)"
+        *ngFor="let column of (columns | async); let columnIndex = index"
+        (click)="lastSortChangedColumn.next(column)"
+        [class.sort-descending]="(columnsSortDirection | async).get(column) == SortDirection.Descending"
+        [class.sort-ascending]="(columnsSortDirection | async).get(column) == SortDirection.Ascending"
+        [class.sort-default]="(columnsSortDirection | async).get(column) == SortDirection.Default"
         [class.fixedWidth]="column.width != undefined"
         [style.width]="column.width != undefined ? column.width : 'initial'"
         class="header-{{columnIndex}}"
         >{{column.title | async}}&nbsp;<span class="glyphicon"
-          [class.glyphicon-triangle-bottom]="column.sort.direction == -1"
-          [class.glyphicon-triangle-top]="column.sort.direction == 1"></span>
+          [class.glyphicon-triangle-bottom]="(columnsSortDirection | async).get(column) == SortDirection.Descending"
+          [class.glyphicon-triangle-top]="(columnsSortDirection | async).get(column) == SortDirection.Ascending"></span>
         </th>
     </tr>
     <tr *ngIf="isFiltrationEnabled">
-      <td *ngFor="let column of _columns"
-        [ngSwitch]="column.filter.type">
+      <td *ngFor="let column of (columns | async); let columnIndex = index"
+        [ngSwitch]="column.filterRenderer | async"
+        class="filter-{{columnIndex}}">
         <ng-container *ngIf="column.isFilterable">
-          <input *ngSwitchCase="'autocomplete'" type="text"
-            blank-option-text="Nie filtruj"
-            [(ngModel)]="column.filter.query"
-            (valueChanged)="refreshGrid()"
-            (click)="this.changeDetectorRef.markForCheck()"
-            ngui-auto-complete
-            class="form-control"
-            placeholder="{{column.title | async}}"
-            [disabled]="!isFiltrationActive"
-            [source]="column.filter.source.call(null)">
-          <input *ngSwitchCase="'checkbox'"
+          <input *ngSwitchCase="CellRenderer.Checkbox"
             type="checkbox"
-            [ngModel]="column.filter.query"
+            [ngModel]="column.checkboxFilterChecked | async"
+            [indeterminate]="column.checkboxFilterIndeterminate | async"
             [disabled]="!isFiltrationActive"
-            (change)="checkboxFilterChanged($event, column)"
+            (change)="checkboxFilterChanged(column)"
             class="form-control">
           <input *ngSwitchDefault
             class="form-control"
             type="text"
             placeholder="{{column.title | async}}"
-            [(ngModel)]="column.filter.query"
-            [formControl]="column.textFilterFormControl" />
+            [ngModel]="column.filterQuery | async"
+            [formControl]="column.filterFormControl" />
         </ng-container>
       </td>
     </tr>
   </thead>
   <tbody>
-    <tr *ngFor="let row of processedSource; let rowIndex = index"
+    <tr *ngFor="let row of processedSource | async; let rowIndex = index"
       [class.selected]="selectedRows.indexOf(row) > -1" 
       [class.batchChangeRow]="batchChangeRow == row"
       class="st-row-{{rowIndex}}">
       <ng-container *ngFor="let column of _columns; let i=index">
         <ng-container *ngIf="!isRowEdited(row) || !column.isEditable">
-          <td [ngSwitch]="column.cellRenderer"
+          <td [ngSwitch]="column.renderer | async"
             (dblclick)="edit([row], column)"
             [class]="(column.classNames | async)(row)"
             (click)="selectRow(row, $event)"
@@ -134,7 +129,7 @@
             <input *ngIf="batchChangeRow == row && column.isEditable"
               type="checkbox"
               [(ngModel)]="batchChangeColumnsSelection[i]">
-            <ng-container *ngSwitchCase="'checkbox'">
+            <ng-container *ngSwitchCase="CellRenderer.Checkbox">
               <span *ngIf="(column.value | async)(row)" class="glyphicon glyphicon-ok"></span>
             </ng-container>
             <ng-container *ngSwitchDefault>
