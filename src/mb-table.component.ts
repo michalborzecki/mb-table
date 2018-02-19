@@ -39,7 +39,7 @@ const sortDirectionCycle = [
   templateUrl: 'mb-table.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, AfterViewChecked {
+export class MbTableComponent implements OnInit, AfterViewInit, AfterViewChecked {
   @Input() settings: any;
   @Input('source')
   get _source(): any[] {
@@ -157,49 +157,6 @@ export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, After
 
   private tableWidthOld = 0;
 
-  // protected static compare = (a, b) => {
-  //   // if a is empty
-  //   if (!a && a !== 0) {
-  //     if (!b && b !== 0) { // empty equals empty
-  //       return 0;
-  //     }
-  //     return -1; // empty is always lower than sth
-  //   } else if (!b && b !== 0) { // if b is empty (and a is not)
-  //     return 1;
-  //   } else { // a and b are not empty
-  //     // special case for strings comparison
-  //     if (typeof a === 'string' && typeof b === 'string') {
-  //       // bugfix for utf-8 characters sorting
-  //       return a.localeCompare(b);
-  //     } else {
-  //       if (a < b) {
-  //         return -1;
-  //       }
-  //       if (a > b) {
-  //         return 1;
-  //       }
-  //       return 0;
-  //     }
-  //   }
-  // }
-
-  // private static stableSort(arr, cmpFunc) {
-  //   let arrOfWrapper = arr.map(function(elem, idx){
-  //       return {elem: elem, idx: idx};
-  //   });
-
-  //   arrOfWrapper.sort(function(wrapperA, wrapperB){
-  //       let cmpDiff = cmpFunc(wrapperA.elem, wrapperB.elem);
-  //       return cmpDiff === 0
-  //            ? wrapperA.idx - wrapperB.idx
-  //            : cmpDiff;
-  //   });
-
-  //   return arrOfWrapper.map(function(wrapper){
-  //       return wrapper.elem;
-  //   });
-  // }
-
   constructor(
     private elementRef: ElementRef,
     private changeDetectorRef: ChangeDetectorRef,
@@ -283,33 +240,6 @@ export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, After
     // }
   }
 
-  ngOnChanges(changes: SimpleChanges) {
-    for (const propName of Object.keys(changes)) {
-      if (propName === '_columns') {
-        this.prepareColumns();
-      }
-      if (propName === 'settings') {
-        this.prepareSettings();
-      }
-      // if (propName === 'source') {
-      //   this.refreshGrid();
-      //   this.editedRows = this.editedRows
-      //     .filter(r => this.processedSource.concat(this.createdRows).indexOf(r.original) !== -1);
-      //   this.changePage(this.selectedPage);
-      // }
-      // if (propName === 'sortConfiguration') {
-      //   this.refreshSortConfiguration();
-      // }
-    }
-  }
-
-  private prepareColumns(): void {
-    this.columns.getValue().forEach(column => {
-      this.prepareColumn(column, this.settings);
-    });
-    // this.columnsSortOrder = this.columns.getValue().slice(0);
-  }
-
   private prepareColumn(column: any, settings: any): void {
     column.calculatedWidth = 0;
     if (!column.cellRenderer) {
@@ -355,16 +285,6 @@ export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, After
           column.editor.valueApplyFunction = (value, row) => row[column.id] = value;
       }
     }
-
-    // if (!column.sort) {
-    //   column.sort = {};
-    // };
-    // column.sort.direction = 0;
-    // if (!column.sort.comparator) {
-    //   column.sort.comparator = (val1, val2) => MbTableComponent.compare(val1, val2);
-    // }
-
-    // column.filterQuery.subscribe(() => this.refreshGrid());
   }
 
   private prepareSettings(): void {
@@ -398,26 +318,7 @@ export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, After
     this.pageSize = this.settings.pageSize;
     this.showCreateButton = this.settings.showCreateButton !== false;
     this.showResetSortButton = this.settings.showResetSortButton !== false;
-    // this.defaultSortConfiguration = !!this.settings.defaultSortConfiguration ?
-    //   this.settings.defaultSortConfiguration : [];
   }
-
-  // private refreshSortConfiguration(): void {
-  //   if (typeof this.sortConfiguration !== 'object') {
-  //     return;
-  //   }
-  //   this.columns.getValue().forEach(c => c.sort.direction = 0);
-  //   const sortedColumns = this.sortConfiguration.map(columnSort => {
-  //     const column = this._columns[columnSort.index];
-  //     column.sort.direction = columnSort.direction;
-  //     return column;
-  //   });
-  //   this.columnsSortOrder = sortedColumns.concat(
-  //     this.columns.getValue().filter(c => sortedColumns.indexOf(c) === -1)
-  //   );
-  //   this.refreshGrid(GridRefreshSteps.SORT);
-  // }
-
   // private refreshGrid(fromStep: GridRefreshSteps = GridRefreshSteps.FILTER) {
   //   let processedSource;
   //   switch (fromStep) {
@@ -454,77 +355,6 @@ export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, After
 
   public getCellValue(row: any, column: any): any {
     return column.value.getValue()(row);
-  }
-
-  // public sortByColumn(column: any): void {
-  //   this.lastSortChangedColumn.next(column);
-    // // cycle values -1, 0, 1
-    // column.sort.direction = (column.sort.direction + 2) % 3 - 1;
-    // this.columnsSortOrder = this.columnsSortOrder
-    //   .filter(c => c !== column)
-    //   .concat([column]);
-    // this.refreshGrid(GridRefreshSteps.SORT);
-  // }
-
-  // public resetSort(): void {
-  //   this.columns.getValue().forEach(c => c.sort.direction = 0);
-  //   this.columnsSortOrder = [];
-  //   this.defaultSortConfiguration.forEach(conf => {
-  //     const column = this.columns.getValue()[conf.index];
-  //     column.sort.direction = conf.direction;
-  //     this.columnsSortOrder.push(column);
-  //   });
-  //   this.refreshGrid(GridRefreshSteps.SORT);
-  // }
-
-  // private performSort(source: any[]): any[] {
-  //   return this.columnsSortOrder
-  //     .filter(column => column.sort.direction !== 0)
-  //     .reduce((sorted, column) =>
-  //       MbTableComponent.stableSort(sorted, (a, b) =>
-  //         column.sort.comparator.call(null,
-  //           a,
-  //           b,
-  //           column,
-  //         ) * column.sort.direction
-  //       ), source.slice(0));
-  // }
-
-  // private performFilter(source: any[]): any[] {
-  //   if (this.isFiltrationActive) {
-  //     return this.columns.getValue()
-  //       .filter(column => column.filterQuery.getValue() !== '')
-  //       .reduce((filtered, column) =>
-  //         filtered.filter((row) =>
-  //           column.filterFunction.getValue()(row, column)
-  //       ), source.slice(0));
-  //   } else {
-  //     return this.source.slice(0);
-  //   }
-  // }
-
-  public toggleFiltration(): void {
-    if (this.isFiltrationActive) {
-      this.columns.getValue().forEach(column => {
-        // if (column.textFilterFormControl) {
-          column.filterFormControl.reset({
-            value: column.filterFormControl.value,
-            disabled: true
-          });
-        // }
-      });
-    } else {
-      this.columns.getValue().forEach(column => {
-        // if (column.textFilterFormControl) {
-          column.filterFormControl.reset({
-            value: column.filterFormControl.value,
-            disabled: false
-          });
-        // }
-      });
-    }
-    this.isFiltrationActive = !this.isFiltrationActive;
-    // this.refreshGrid(GridRefreshSteps.FILTER);
   }
 
   private performPagination(source: any[]): any[] {
@@ -731,7 +561,6 @@ export class MbTableComponent implements OnInit, OnChanges, AfterViewInit, After
         column.filterQuery.next('');
         break;
     }
-    // this.refreshGrid(GridRefreshSteps.FILTER);
   }
 
   public remove(): void {

@@ -24,7 +24,6 @@ function getColumns(): ColumnDefinition[] {
 @Component({
   template: `
     <mb-table
-      [settings]="settings"
       [columns]="columns"
       [source]="source"
       [configuration]="configuration">
@@ -32,7 +31,6 @@ function getColumns(): ColumnDefinition[] {
   `
 })
 class TestHostComponent {
-  @Input() settings: any = {};
   @Input() columns: ColumnDefinition[] = [];
   @Input() source: any[] = [];
   @Input() sortAlgorithm: SortAlgorithm = new MultiColumnSort();

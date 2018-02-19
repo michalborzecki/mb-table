@@ -25,10 +25,6 @@
   </ng-container>
   <div class="pull-right right-buttons">
     <div class="btn-group" role="group">
-      <button *ngIf="isFiltrationEnabled"
-        class="btn btn-sm btn-default"
-        (click)="toggleFiltration()"
-        [class.active]="isFiltrationActive">Filtruj</button>
       <button *ngIf="showResetSortButton"
         class="btn btn-sm btn-default reset-sort" (click)="resetSortButtonClick.next($event)">Przywróć sort.</button>
     </div>
