@@ -190,6 +190,39 @@ describe('MbTableComponent', () => {
     );
   });
 
+  it('[column renderer] renders value using text renderer', () => {
+    const columns = [
+      new ColumnDefinition({ value: 'v', renderer: CellRenderer.Text }),
+    ];
+    const source = [{ v: 'test' }];
+    component.columns = columns;
+    component.source = source;
+    fixture.autoDetectChanges();
+    expect(getCellElement(fixture, 0, 0).innerText.trim()).toBe(source[0].v);
+  });
+
+  it('[column renderer] renders value using number renderer', () => {
+    const columns = [
+      new ColumnDefinition({ value: 'v', renderer: CellRenderer.Number }),
+    ];
+    const source = [{ v: 123 }];
+    component.columns = columns;
+    component.source = source;
+    fixture.autoDetectChanges();
+    expect(getCellElement(fixture, 0, 0).innerText.trim()).toBe(String(source[0].v));
+  });
+
+  it('[column renderer] renders value using checkbox renderer', () => {
+    const columns = [
+      new ColumnDefinition({ value: 'v', renderer: CellRenderer.Checkbox }),
+    ];
+    const source = [{ v: true }];
+    component.columns = columns;
+    component.source = source;
+    fixture.autoDetectChanges();
+    expect(getCellElement(fixture, 0, 0).querySelector('.glyphicon-ok')).toBeTruthy();
+  });
+
   it('[column class] uses column class names provided as strings', () => {
     const columns = [
       new ColumnDefinition({ value: 'lastName', classNames: 'class1' }),

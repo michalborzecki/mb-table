@@ -3,11 +3,9 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Input,
-  SimpleChanges,
   AfterViewInit,
   AfterViewChecked,
   NgZone,
-  OnChanges,
   OnInit,
   ElementRef,
 } from '@angular/core';
@@ -242,9 +240,6 @@ export class MbTableComponent implements OnInit, AfterViewInit, AfterViewChecked
 
   private prepareColumn(column: any, settings: any): void {
     column.calculatedWidth = 0;
-    if (!column.cellRenderer) {
-      column.cellRenderer = 'text';
-    }
     column.isEditable = column.isEditable === undefined ? true : !!column.isEditable;
     if (!column.editor) {
       column.editor = {};
