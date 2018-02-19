@@ -96,6 +96,11 @@ export class ColumnDefinition {
   public readonly filterConfigurationChanged: Observable<ColumnDefinition>;
 
   /**
+   * Subject with flag, that indicates whether sort should be enabled or not.
+   */
+  private sortEnabledSubject: BehaviorSubject<boolean> = new BehaviorSubject(true);
+
+  /**
    * Subject with function that is used while sorting to compare two records.
    * @type {BehaviorSubject<(recordA: any, recordB: any, column: ColumnDefinition) => number>}
    */
@@ -172,6 +177,13 @@ export class ColumnDefinition {
    */
   get filterDebounceTime(): BehaviorSubject<number> {
     return this.filterDebounceTimeSubject;
+  }
+
+  /**
+   * Subject with flag, that indicates whether sort should be enabled or not.
+   */
+  public get sortEnabled(): BehaviorSubject<boolean> {
+    return this.sortEnabledSubject;
   }
 
   /**
@@ -323,6 +335,16 @@ export class ColumnDefinition {
       }
     }
 
+    // sortEnabled
+    if (columnDefinitionSource.sortEnabled !== undefined) {
+      const sortEnabled = columnDefinitionSource.sortEnabled;
+      if (sortEnabled instanceof BehaviorSubject) {
+        this.sortEnabledSubject = sortEnabled;
+      } else {
+        this.sortEnabledSubject.next(sortEnabled);
+      }
+    }
+
     // sortComparator
     if (columnDefinitionSource.sortComparator) {
       const sortComparator = columnDefinitionSource.sortComparator;
@@ -453,6 +475,11 @@ export class ColumnDefinitionSource {
    * @type {number | BehaviorSubject<number>}
    */
   public filterDebounceTime?: number | BehaviorSubject<number>;
+
+  /**
+   * Flag that indicates whether sort should be enabled or not.
+   */
+  public sortEnabled?: boolean | BehaviorSubject<boolean>;
 
   /**
    * Source for function, which is used while sorting to compare two records. May be:

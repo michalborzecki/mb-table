@@ -60,7 +60,9 @@ export class MultiColumnSort extends SortAlgorithm {
    */
   public sort(records: any[]): any[] {
     const columnsSortState = (this.columnsSortStateSubject.getValue() || [])
-      .filter(sortState => sortState.direction !== SortDirection.Default);
+      .filter(sortState =>
+        sortState.column.sortEnabled.getValue() && sortState.direction !== SortDirection.Default
+      );
 
     if (columnsSortState.length === 0) {
       return records.slice(0);

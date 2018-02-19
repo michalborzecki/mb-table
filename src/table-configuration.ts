@@ -17,6 +17,11 @@ export class TableConfiguration {
   private filterEnabledSubject: BehaviorSubject<boolean> = new BehaviorSubject(true);
 
   /**
+   * Subject with flag, that indicates whether sort should be enabled or not.
+   */
+  private sortEnabledSubject: BehaviorSubject<boolean> = new BehaviorSubject(true);
+
+  /**
    * Subject with sort algorithm.
    */
   private sortAlgorithmSubject: BehaviorSubject<SortAlgorithm> = new BehaviorSubject(new MultiColumnSort());
@@ -31,6 +36,13 @@ export class TableConfiguration {
    */
   public get filterEnabled(): BehaviorSubject<boolean> {
     return this.filterEnabledSubject;
+  }
+
+  /**
+   * Subject with flag, that indicates whether sort should be enabled or not.
+   */
+  public get sortEnabled(): BehaviorSubject<boolean> {
+    return this.sortEnabledSubject;
   }
 
   /**
@@ -74,6 +86,16 @@ export class TableConfiguration {
       }
     }
 
+    // sortEnabled
+    if (tableConfigurationSource.sortEnabled !== undefined) {
+      const sortEnabled = tableConfigurationSource.sortEnabled;
+      if (sortEnabled instanceof BehaviorSubject) {
+        this.sortEnabledSubject = sortEnabled;
+      } else {
+        this.sortEnabledSubject.next(sortEnabled);
+      }
+    }
+
     // sortAlgorithm
     if (tableConfigurationSource.sortAlgorithm !== undefined) {
       const sortAlgorithm = tableConfigurationSource.sortAlgorithm;
@@ -104,6 +126,11 @@ export class TableConfigurationSource {
    * Flag that indicates whether filtration should be enabled or not.
    */
   public filterEnabled?: boolean | BehaviorSubject<boolean>;
+
+  /**
+   * Flag that indicates whether sort should be enabled or not.
+   */
+  public sortEnabled?: boolean | BehaviorSubject<boolean>;
 
   /**
    * Sort algorithm.

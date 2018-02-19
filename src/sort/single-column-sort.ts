@@ -63,7 +63,9 @@ export class SingleColumnSort extends SortAlgorithm {
    */
   public sort(records: any[]): any[] {
     const columnSortState = this.columnSortStateSubject.getValue();
-    if (!columnSortState || columnSortState.direction === SortDirection.Default) {
+    if (!columnSortState ||
+      columnSortState.direction === SortDirection.Default ||
+      !columnSortState.column.sortEnabled.getValue()) {
       return records.slice(0);
     }
 

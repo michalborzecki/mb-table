@@ -66,18 +66,18 @@ export class MbTableComponent implements OnInit, AfterViewInit, AfterViewChecked
   configuration: BehaviorSubject<TableConfiguration> = new BehaviorSubject(new TableConfiguration());
   source: BehaviorSubject<any[]> = new BehaviorSubject([]);
   columns: BehaviorSubject<any[]> = new BehaviorSubject([]);
-  columnsSortDirection: Observable<Map<ColumnDefinition, SortDirection>> =
-    Observable.combineLatest(
-      this.columns,
-      this.configuration.switchMap(c => c.sortAlgorithm).switchMap(s => s.columnsSortState),
-      (columns, columnsSortState) => {
-        const mapSource = columns.map(column => {
-          const sortState = columnsSortState.filter(columnSortState => columnSortState.column === column)[0];
-          return [column, sortState ? sortState.direction : SortDirection.Default] as [ColumnDefinition, SortDirection];
-        });
-        return new Map(mapSource);
-      }
-    );
+  columnsSortDirection: Observable<Map<ColumnDefinition, SortDirection>> = Observable.combineLatest(
+    this.configuration.switchMap(c => c.sortEnabled),
+    this.columns,
+    this.configuration.switchMap(c => c.sortAlgorithm).switchMap(s => s.columnsSortState),
+    (sortEnabled, columns, columnsSortState) => {
+      const mapSource = columns.map(column => {
+        const sortState = columnsSortState.filter(columnSortState => columnSortState.column === column)[0];
+        return [column, sortEnabled && sortState ? sortState.direction : SortDirection.Default] as [ColumnDefinition, SortDirection];
+      });
+      return new Map(mapSource);
+    }
+  );
 
   private lastSortChangedColumn: Subject<ColumnDefinition> = new Subject();
   private resetSortButtonClick: Subject<Event> = new Subject();
@@ -126,9 +126,11 @@ export class MbTableComponent implements OnInit, AfterViewInit, AfterViewChecked
    * Filtered source data after sorting.
    */
   private sortedSource: Observable<any[]> = Observable.combineLatest(
+    this.configuration.switchMap(c => c.sortEnabled),
     this.configuration.switchMap(c => c.sortAlgorithm).switchMap(s => s.configurationChanged),
     this.filteredSource,
-    (sortAlgorithm, filteredSource) => sortAlgorithm.sort(filteredSource)
+    (sortEnabled, sortAlgorithm, filteredSource) =>
+      sortEnabled ? sortAlgorithm.sort(filteredSource) : filteredSource.slice(0)
   );
 
   paginatedSource: Observable<any[]> = this.sortedSource.map(arr => arr.slice(0));
@@ -167,16 +169,24 @@ export class MbTableComponent implements OnInit, AfterViewInit, AfterViewChecked
 
   private setupColumnSortChangeHandler(): void {
     this.lastSortChangedColumn
-      .withLatestFrom(this.configuration.switchMap(c => c.sortAlgorithm))
-      .withLatestFrom(this.columnsSortDirection)
-      .subscribe(([[column, sortAlgorithm], columnsSortDirection]) => {
-        const actualDirection = columnsSortDirection.get(column);
-        if (actualDirection === undefined) {
-          return;
+      .withLatestFrom(
+        this.configuration.switchMap(c => c.sortEnabled),
+        this.configuration.switchMap(c => c.sortAlgorithm),
+        this.columnsSortDirection
+      )
+      .filter(([column, sortEnabled, ]) =>
+        sortEnabled && column.sortEnabled.getValue()
+      )
+      .subscribe(([column, , sortAlgorithm, columnsSortDirection]) => {
+        if (column.sortEnabled.getValue()) {
+          const actualDirection = columnsSortDirection.get(column);
+          if (actualDirection === undefined) {
+            return;
+          }
+          let nextDirection = sortDirectionCycle[sortDirectionCycle.indexOf(actualDirection) + 1];
+          sortAlgorithm.applyColumnSort(new ColumnSortState(column, nextDirection));
         }
-        let nextDirection = sortDirectionCycle[sortDirectionCycle.indexOf(actualDirection) + 1];
-        sortAlgorithm.applyColumnSort(new ColumnSortState(column, nextDirection));
-    });
+      });
   }
 
   private setupSortResetHandler(): void {

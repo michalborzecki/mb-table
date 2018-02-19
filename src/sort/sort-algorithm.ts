@@ -53,7 +53,8 @@ export abstract class SortAlgorithm {
     return this.columnsSortState.switchMap(columnsSortState => {
       if (columnsSortState.length) {
         return Observable.combineLatest(
-          ...columnsSortState.map(columnSortState => columnSortState.column.sortComparator)
+          ...columnsSortState.map(columnSortState => columnSortState.column.sortComparator),
+          ...columnsSortState.map(columnSortState => columnSortState.column.sortEnabled),
         ).map(x => this);
       } else {
         return Observable.of(this);
