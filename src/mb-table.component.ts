@@ -94,7 +94,6 @@ export class MbTableComponent implements OnInit, AfterViewInit, AfterViewChecked
   showResetSortButton = true;
   // defaultSortConfiguration: any[] = [];
 
-  isPaginationEnabled = false;
   pageSize = 0;
   selectedPage = 0;
   selectedPageTextValue = '1';
@@ -309,7 +308,6 @@ export class MbTableComponent implements OnInit, AfterViewInit, AfterViewChecked
     this.isDeletionEnabled = this.settings.isDeletionEnabled !== false;
     this.isBatchChangeEnabled = (this.settings.isBatchChangeEnabled !== false) && this.isEditionEnabled;
 
-    this.isPaginationEnabled = !!this.settings.pageSize;
     this.pageSize = this.settings.pageSize;
     this.showCreateButton = this.settings.showCreateButton !== false;
     this.showResetSortButton = this.settings.showResetSortButton !== false;

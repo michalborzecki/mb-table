@@ -28,7 +28,7 @@
       <button *ngIf="showResetSortButton"
         class="btn btn-sm btn-default reset-sort" (click)="resetSortButtonClick.next($event)">Przywróć sort.</button>
     </div>
-    <div *ngIf="isPaginationEnabled" class="input-group pagination-bar">
+    <div *ngIf="(configuration | async).paginationEnabled | async" class="input-group pagination-bar">
       <div class="input-group-btn">
         <button
           class="btn btn-sm btn-default"

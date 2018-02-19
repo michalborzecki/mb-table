@@ -6,7 +6,7 @@ import { Component, Input } from '@angular/core';
 import { ColumnDefinition } from '../column-definition';
 import { BehaviorSubject } from 'rxjs/Rx';
 import { CellRenderer } from '../cell-renderer';
-import { getCellElement, getHeaderElement, getFilterInputElement, getRowsElements, getFilterRow } from './helpers/element';
+import { getCellElement, getHeaderElement, getFilterInputElement, getRowsElements, getFilterRow, getPaginationBar } from './helpers/element';
 import { fillIn, toggleCheckbox } from './helpers/input';
 import { SortAlgorithm, SortDirection, ColumnSortState } from '../sort/sort-algorithm';
 import { MultiColumnSort } from '../sort/multi-column-sort';
@@ -1331,6 +1331,49 @@ describe('MbTableComponent', () => {
         done();
       });
     });
+  });
+
+  it('[pagination] hides pagination bar if paginationEnabled=false', () => {
+    const columns = [
+      new ColumnDefinition({ value: 'l1' }),
+    ];
+    component.columns = columns;
+    component.configuration = new TableConfiguration({ paginationEnabled: false });
+    fixture.autoDetectChanges();
+    expect(getPaginationBar(fixture)).toBeNull();
+  });
+
+  it('[pagination] shows pagination bar if paginationEnabled=true', () => {
+    const columns = [
+      new ColumnDefinition({ value: 'l1' }),
+    ];
+    component.columns = columns;
+    component.configuration = new TableConfiguration({ paginationEnabled: true });
+    fixture.autoDetectChanges();
+    expect(getPaginationBar(fixture)).toBeTruthy();
+  });
+
+  it('[pagination] shows pagination bar if subject paginationEnabled contains true', () => {
+    const columns = [
+      new ColumnDefinition({ value: 'l1' }),
+    ];
+    component.columns = columns;
+    component.configuration = new TableConfiguration({ paginationEnabled: new BehaviorSubject(true) });
+    fixture.autoDetectChanges();
+    expect(getPaginationBar(fixture)).toBeTruthy();
+  });
+
+  it('[pagination] shows pagination bar if subject paginationEnabled changes to true', () => {
+    const columns = [
+      new ColumnDefinition({ value: 'l1' }),
+    ];
+    component.columns = columns;
+    const paginationEnabled = new BehaviorSubject(false);
+    component.configuration = new TableConfiguration({ paginationEnabled });
+    fixture.autoDetectChanges();
+    paginationEnabled.next(true);
+    fixture.autoDetectChanges();
+    expect(getPaginationBar(fixture)).toBeTruthy();
   });
 });
 

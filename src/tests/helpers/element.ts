@@ -33,3 +33,7 @@ export function getFilterInputElement(fixture: ComponentFixture<any>, columnInde
 export function getRowsElements(fixture: ComponentFixture<any>): NodeListOf<HTMLElement> {
   return fixture.nativeElement.querySelectorAll('tbody tr') as NodeListOf<HTMLElement>;
 }
+
+export function getPaginationBar(fixture: ComponentFixture<any>): HTMLElement {
+  return fixture.nativeElement.querySelector('.pagination-bar');
+}

@@ -22,6 +22,11 @@ export class TableConfiguration {
   private sortAlgorithmSubject: BehaviorSubject<SortAlgorithm> = new BehaviorSubject(new MultiColumnSort());
 
   /**
+   * Subject with flag, that indicates whether pagination should be enabled or not.
+   */
+  private paginationEnabledSubject: BehaviorSubject<boolean> = new BehaviorSubject(false);
+
+  /**
    * Subject with flag, that indicates whether filtration should be enabled or not.
    */
   public get filterEnabled(): BehaviorSubject<boolean> {
@@ -33,6 +38,13 @@ export class TableConfiguration {
    */
   public get sortAlgorithm(): BehaviorSubject<SortAlgorithm> {
     return this.sortAlgorithmSubject;
+  }
+
+  /**
+   * Subject with flag, that indicates whether pagination should be enabled or not.
+   */
+  public get paginationEnabled(): BehaviorSubject<boolean> {
+    return this.paginationEnabledSubject;
   }
 
   /**
@@ -71,6 +83,16 @@ export class TableConfiguration {
         this.sortAlgorithmSubject.next(sortAlgorithm);
       }
     }
+
+    // paginationEnabled
+    if (tableConfigurationSource.paginationEnabled !== undefined) {
+      const paginationEnabled = tableConfigurationSource.paginationEnabled;
+      if (paginationEnabled instanceof BehaviorSubject) {
+        this.paginationEnabledSubject = paginationEnabled;
+      } else {
+        this.paginationEnabledSubject.next(paginationEnabled);
+      }
+    }
   }
 }
 
@@ -87,4 +109,9 @@ export class TableConfigurationSource {
    * Sort algorithm.
    */
   public sortAlgorithm?: SortAlgorithm | BehaviorSubject<SortAlgorithm>;
+
+  /**
+   * Flag that indicates whether pagination should be enabled or not.
+   */
+  public paginationEnabled?: boolean | BehaviorSubject<boolean>;
 }
