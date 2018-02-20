@@ -1,8 +1,7 @@
-import { BehaviorSubject } from 'rxjs/Rx';
+import { Observable, BehaviorSubject } from 'rxjs/Rx';
 import { defaultComparator } from './sort/default-comparator';
 import { CellRenderer } from './cell-renderer';
 import { FormControl } from '@angular/forms';
-import { Observable } from 'rxjs/Observable';
 import { nonStrictFilter } from './filter/non-strict-filter';
 import { numberFilter } from './filter/number-filter';
 import { strictFilter } from './filter/strict-filter';

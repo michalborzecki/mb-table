@@ -21,7 +21,7 @@ gulp.task('clean:dist', function () {
 
   // Delete contents but not dist folder to avoid broken npm links
   // when dist directory is removed while npm link references it.
-  return deleteFolders([distFolder + '/**', '!' + distFolder]);
+  return del([distFolder + '/**', '!' + distFolder]);
 });
 
 /**
@@ -84,12 +84,23 @@ gulp.task('rollup:fesm', function () {
       // See "external" in https://rollupjs.org/#core-functionality
       external: [
         '@angular/core',
-        '@angular/common'
+        '@angular/common',
+        '@angular/forms',
+        '@ngui/auto-complete',
+        'jquery',
+        'rxjs/Rx',
+        'element-resize-detector'
       ],
 
       // Format of generated bundle
       // See "format" in https://rollupjs.org/#core-functionality
-      format: 'es'
+      format: 'es',
+
+      onwarn: function (warning) {
+        if (warning.code !== 'THIS_IS_UNDEFINED') {
+          console.warn(warning.message)
+        }
+      }
     }))
     .pipe(gulp.dest(distFolder));
 });
@@ -117,7 +128,12 @@ gulp.task('rollup:umd', function () {
       // See "external" in https://rollupjs.org/#core-functionality
       external: [
         '@angular/core',
-        '@angular/common'
+        '@angular/common',
+        '@angular/forms',
+        '@ngui/auto-complete',
+        'jquery',
+        'rxjs/Rx',
+        'element-resize-detector'
       ],
 
       // Format of generated bundle
@@ -135,9 +151,21 @@ gulp.task('rollup:umd', function () {
 
       // See "globals" in https://rollupjs.org/#core-functionality
       globals: {
-        typescript: 'ts'
-      }
+        typescript: 'ts',
+        '@angular/core': 'core',
+        '@angular/common': 'common',
+        '@angular/forms': 'forms',
+        '@ngui/auto-complete': 'autoComplete',
+        'jquery': '$',
+        'element-resize-detector': 'elementResizeDetector',
+        'rxjs/Rx': 'Rx'
+      },
 
+      onwarn: function (warning) {
+        if (warning.code !== 'THIS_IS_UNDEFINED') {
+          console.warn(warning.message)
+        }
+      }
     }))
     .pipe(rename('mb-table.umd.js'))
     .pipe(gulp.dest(distFolder));
@@ -173,14 +201,14 @@ gulp.task('copy:readme', function () {
  * 10. Delete /.tmp folder
  */
 gulp.task('clean:tmp', function () {
-  return deleteFolders([tmpFolder]);
+  return del([tmpFolder]);
 });
 
 /**
  * 11. Delete /build folder
  */
 gulp.task('clean:build', function () {
-  return deleteFolders([buildFolder]);
+  return del([buildFolder]);
 });
 
 gulp.task('compile', function () {
@@ -199,7 +227,7 @@ gulp.task('compile', function () {
     function (err) {
       if (err) {
         console.log('ERROR:', err.message);
-        deleteFolders([distFolder, tmpFolder, buildFolder]);
+        del([distFolder, tmpFolder, buildFolder]);
       } else {
         console.log('Compilation finished succesfully');
       }
@@ -218,10 +246,3 @@ gulp.task('clean', ['clean:dist', 'clean:tmp', 'clean:build']);
 gulp.task('build', ['clean', 'compile']);
 gulp.task('build:watch', ['build', 'watch']);
 gulp.task('default', ['build:watch']);
-
-/**
- * Deletes the specified folder
- */
-function deleteFolders(folders) {
-  return del(folders);
-}

@@ -11,9 +11,6 @@
     },
     // map tells the System loader where to look for things
     map: {
-      // our app is within the app folder
-      app: 'app',
-
       // angular bundles
       '@angular/core': 'npm:@angular/core/bundles/core.umd.js',
       '@angular/common': 'npm:@angular/common/bundles/common.umd.js',
@@ -31,18 +28,10 @@
       rxjs: 'npm:rxjs',
 
       'angular-in-memory-web-api': 'npm:angular-in-memory-web-api/bundles/in-memory-web-api.umd.js',
-      'mb-table': '../dist'
+      'mb-table': '../dist/mb-table.umd.js'
     },
     // packages tells the System loader how to load when no filename and/or no extension
     packages: {
-      app: {
-        defaultExtension: 'js',
-        meta: {
-          './*.js': {
-            loader: 'systemjs-angular-loader.js'
-          }
-        }
-      },
       rxjs: {
         defaultExtension: 'js'
       },
@@ -50,10 +39,6 @@
         format: 'global',
         exports: 'elementResizeDetector'
       },
-      'mb-table': {
-        main: 'mb-table.umd.js',
-        defaultExtension: 'js'
-      }
     }
   });
 })(this);
