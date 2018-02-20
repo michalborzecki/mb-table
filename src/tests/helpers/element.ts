@@ -1,4 +1,4 @@
-import { ComponentFixture } from '@angular/core/testing'
+import { ComponentFixture } from '@angular/core/testing';
 import { ColumnDefinition } from '../../column-definition';
 import { CellRenderer } from '../../cell-renderer';
 
@@ -36,4 +36,8 @@ export function getRowsElements(fixture: ComponentFixture<any>): NodeListOf<HTML
 
 export function getPaginationBar(fixture: ComponentFixture<any>): HTMLElement {
   return fixture.nativeElement.querySelector('.pagination-bar');
+}
+
+export function getResetSortButton(fixture: ComponentFixture<any>): HTMLElement {
+  return fixture.nativeElement.querySelector('.reset-sort');
 }
