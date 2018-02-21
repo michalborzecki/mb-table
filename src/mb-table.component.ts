@@ -33,7 +33,7 @@ const sortDirectionCycle = [
 
 @Component({
   selector: 'mb-table',
-  styleUrls: ['mb-table.scss'],
+  styleUrls: ['mb-table.css'],
   templateUrl: 'mb-table.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
