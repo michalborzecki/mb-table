@@ -24,7 +24,12 @@
     "flatModuleOutFile": "mb-table.js",
     "flatModuleId": "mb-table"
   },
-  "files": [
-    "./index.ts"
+  "includes": [
+    "**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "tests/**/*",
+    "**/*.spec.ts"
   ]
 }

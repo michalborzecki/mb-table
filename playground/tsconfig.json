@@ -11,7 +11,7 @@
     "suppressImplicitAnyIndexErrors": true,
     "baseUrl": ".",
     "paths": {
-      "mb-table": ["../dist/mb-table.d.ts"]
+      "mb-table": ["../dist/index.d.ts"]
     }
   },
   "angularCompilerOptions": {

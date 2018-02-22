@@ -7,7 +7,7 @@
   System.config({
     paths: {
       // paths serve as alias
-      'npm:': '../node_modules/'
+      'npm:': 'node_modules/'
     },
     // map tells the System loader where to look for things
     map: {
@@ -28,7 +28,7 @@
       rxjs: 'npm:rxjs',
 
       'angular-in-memory-web-api': 'npm:angular-in-memory-web-api/bundles/in-memory-web-api.umd.js',
-      'mb-table': '../dist/mb-table.umd.js'
+      'mb-table': '../dist'
     },
     // packages tells the System loader how to load when no filename and/or no extension
     packages: {
@@ -39,6 +39,10 @@
         format: 'global',
         exports: 'elementResizeDetector'
       },
+      'mb-table': {
+        defaultExtension: 'js',
+        main: 'index.js'
+      }
     }
   });
 })(this);

@@ -52,9 +52,12 @@
     "del": "^2.2.2",
     "element-resize-detector": "^1.1.12",
     "gulp": "^3.9.1",
+    "gulp-if": "^2.0.2",
     "gulp-rename": "^1.2.2",
     "gulp-rollup": "^2.15.0",
     "gulp-sass": "^3.1.0",
+    "gulp-sourcemaps": "^2.6.4",
+    "gulp-typescript": "^4.0.1",
     "jasmine-core": "2.99.1",
     "jasmine-spec-reporter": "4.2.1",
     "jquery": "^3.2.1",
@@ -66,6 +69,7 @@
     "karma-jasmine-html-reporter": "0.2.2",
     "karma-typescript": "^3.0.9",
     "karma-typescript-angular2-transform": "^1.0.2",
+    "merge-stream": "^1.0.1",
     "node-sass": "^4.5.2",
     "node-sass-tilde-importer": "^1.0.0",
     "node-watch": "^0.5.2",
@@ -77,6 +81,7 @@
     "ts-node": "~2.0.0",
     "tslint": "~4.5.0",
     "typescript": "~2.2.0",
+    "yargs": "^11.0.0",
     "zone.js": "^0.8.4"
   },
   "engines": {

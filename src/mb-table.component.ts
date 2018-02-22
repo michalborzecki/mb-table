@@ -9,13 +9,16 @@ import {
   OnInit,
   ElementRef,
 } from '@angular/core';
-import $ from 'jquery';
-import elementResizeDetector from 'element-resize-detector';
+import * as $_ from 'jquery';
+import * as elementResizeDetector_ from 'element-resize-detector';
 import { BehaviorSubject, Subject, Observable } from 'rxjs/Rx';
 import { CellRenderer } from './cell-renderer';
 import { ColumnDefinition } from './column-definition';
 import { SortDirection, ColumnSortState } from './sort/sort-algorithm';
 import { TableConfiguration } from './table-configuration';
+
+let $ = $_;
+let elementResizeDetector = elementResizeDetector_;
 
 const enum GridRefreshSteps {
   FILTER,

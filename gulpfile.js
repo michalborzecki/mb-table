@@ -1,6 +1,10 @@
 var gulp = require('gulp'),
+  argv = require('yargs').argv,
+  gulpIf = require('gulp-if'),
   path = require('path'),
-  ngc = require('@angular/compiler-cli/src/main').main,
+  merge = require('merge-stream'),
+  ts = require('gulp-typescript'),
+  sourcemaps = require('gulp-sourcemaps'),
   rollup = require('gulp-rollup'),
   rename = require('gulp-rename'),
   del = require('del'),
@@ -16,6 +20,8 @@ const buildFolder = path.join(rootFolder, 'build');
 const distFolder = path.join(rootFolder, 'dist');
 const playgroundSrcFolder = path.join(rootFolder, 'playground');
 const playgroundBuildFolder = path.join(rootFolder, '.playground');
+
+let devMode = argv.dev;
 
 gulp.task('clean:table-dist', function () {
   return del([distFolder + '/**', '!' + distFolder]);
@@ -36,10 +42,20 @@ gulp.task('inline-resources:table-source-copy', function () {
   return inlineResources(tmpFolder);
 });
 
-gulp.task('ngc:table-source-copy', function () {
-  return ngc({
-    project: `${tmpFolder}/tsconfig.es5.json`
-  });
+gulp.task('tsc:table-source-copy', function () {
+  const tsProject = ts.createProject(
+    `${tmpFolder}/tsconfig.es5.json`,
+    devMode ? { module: 'commonjs' } : {}
+  );
+  const tsResult = tsProject.src()
+    .pipe(gulpIf(devMode, sourcemaps.init()))
+    .pipe(tsProject());
+  return merge(
+    tsResult.js
+      .pipe(gulpIf(devMode, sourcemaps.write()))
+      .pipe(gulp.dest(buildFolder)),
+    tsResult.dts.pipe(gulp.dest(buildFolder))
+  );
 });
 
 gulp.task('rollup-fesm:table-build', function () {
@@ -104,7 +120,7 @@ gulp.task('rollup-umd:table-build', function () {
 });
 
 gulp.task('copy:table-build', function () {
-  return gulp.src([`${buildFolder}/**/*`, `!${buildFolder}/**/*.js`])
+  return gulp.src([`${buildFolder}/**/*`].concat(devMode ? [] : [`!${buildFolder}/**/*.js`]))
     .pipe(gulp.dest(distFolder));
 });
 
@@ -127,14 +143,17 @@ gulp.task('clean:table-build', function () {
 });
 
 gulp.task('compile:table', function (done) {
+  const rollup = devMode ? [] : [
+    'rollup-fesm:table-build',
+    'rollup-umd:table-build',
+  ];
   return runSequence(
     'clean:table-dist',
     'copy:table-source',
     'sass:table-source-copy',
     'inline-resources:table-source-copy',
-    'ngc:table-source-copy',
-    'rollup-fesm:table-build',
-    'rollup-umd:table-build',
+    'tsc:table-source-copy',
+    ...rollup,
     'copy:table-build',
     'copy:table-manifest',
     'copy:table-readme',
@@ -174,27 +193,27 @@ gulp.task('copy:playground', function () {
   ]).pipe(gulp.dest(playgroundBuildFolder));
 });
 
-gulp.task('ngc:playground', function () {
-  return ngc({
-    project: `${playgroundSrcFolder}/tsconfig.json`
-  })
-    .then((exitCode) => {
-      if (exitCode === 1) {
-        throw new Error('ngc compilation failed');
-      }
-    });
+gulp.task('tsc:playground', function () {
+  const tsProject = ts.createProject(`${playgroundSrcFolder}/tsconfig.json`);
+  return tsProject
+    .src()
+    .pipe(sourcemaps.init())
+    .pipe(tsProject()).js
+    .pipe(sourcemaps.write())
+    .pipe(gulp.dest(playgroundBuildFolder));
 });
 
 gulp.task('playground:compile', function (done) {
   runSequence(
     'clean:playground',
     'copy:playground',
-    'ngc:playground',
+    'tsc:playground',
     done
   );
 });
 
 gulp.task('playground:build', function (done) {
+  devMode = true;
   runSequence(
     'compile:table',
     'playground:compile',
@@ -212,7 +231,7 @@ gulp.task('playground:serve', ['playground:build'], function () {
       },
     },
   });
-})
+});
 
 gulp.task('playground:serve-refresh', function (done) {
   return runSequence(
@@ -222,7 +241,7 @@ gulp.task('playground:serve-refresh', function (done) {
       done();
     }
   );
-})
+});
 
 gulp.task('playground', ['playground:serve']);
 
