@@ -29,7 +29,23 @@ export class TableConfiguration {
   /**
    * Subject with flag, that indicates whether pagination should be enabled or not.
    */
-  private paginationEnabledSubject: BehaviorSubject<boolean> = new BehaviorSubject(false);
+  private paginationEnabledSubject: BehaviorSubject<boolean> = new BehaviorSubject(true);
+
+  /**
+   * Subject with page size used by pagination mechanism.
+   */
+  private pageSizeSubject: BehaviorSubject<number> = new BehaviorSubject(20);
+
+  /**
+   * Subject with a number of the active page.
+   */
+  private activePageSubject: BehaviorSubject<number> = new BehaviorSubject(1);
+
+  /**
+   * Subject with active page control change debounce time.
+   * @type {BehaviorSubject<number>}
+   */
+  private activePageControlDebounceTimeSubject: BehaviorSubject<number> = new BehaviorSubject(300);
 
   /**
    * Subject with flag, that indicates whether filtration should be enabled or not.
@@ -57,6 +73,27 @@ export class TableConfiguration {
    */
   public get paginationEnabled(): BehaviorSubject<boolean> {
     return this.paginationEnabledSubject;
+  }
+
+  /**
+   * Subject with page size used by pagination mechanism.
+   */
+  public get pageSize(): BehaviorSubject<number> {
+    return this.pageSizeSubject;
+  }
+
+  /**
+   * Subject with a number of the active page.
+   */
+  public get activePage(): BehaviorSubject<number> {
+    return this.activePageSubject;
+  }
+
+  /**
+   * Subject with active page control change debounce time.
+   */
+  public get activePageControlDebounceTime(): BehaviorSubject<number> {
+    return this.activePageControlDebounceTimeSubject;
   }
 
   /**
@@ -115,6 +152,36 @@ export class TableConfiguration {
         this.paginationEnabledSubject.next(paginationEnabled);
       }
     }
+
+    // pageSize
+    if (tableConfigurationSource.pageSize !== undefined) {
+      const pageSize = tableConfigurationSource.pageSize;
+      if (pageSize instanceof BehaviorSubject) {
+        this.pageSizeSubject = pageSize;
+      } else {
+        this.pageSizeSubject.next(pageSize);
+      }
+    }
+
+    // activePage
+    if (tableConfigurationSource.activePage !== undefined) {
+      const activePage = tableConfigurationSource.activePage;
+      if (activePage instanceof BehaviorSubject) {
+        this.activePageSubject = activePage;
+      } else {
+        this.activePageSubject.next(activePage);
+      }
+    }
+
+    // activePageControlDebounceTime
+    if (tableConfigurationSource.activePageControlDebounceTime !== undefined) {
+      const activePageControlDebounceTime = tableConfigurationSource.activePageControlDebounceTime;
+      if (activePageControlDebounceTime instanceof BehaviorSubject) {
+        this.activePageControlDebounceTimeSubject = activePageControlDebounceTime;
+      } else {
+        this.activePageControlDebounceTimeSubject.next(activePageControlDebounceTime);
+      }
+    }
   }
 }
 
@@ -141,4 +208,19 @@ export class TableConfigurationSource {
    * Flag that indicates whether pagination should be enabled or not.
    */
   public paginationEnabled?: boolean | BehaviorSubject<boolean>;
+
+  /**
+   * Page size used by pagination mechanism.
+   */
+  public pageSize?: number | BehaviorSubject<number>;
+
+  /**
+   * Number of the active page.
+   */
+  public activePage?: number | BehaviorSubject<number>;
+
+  /**
+   * Subject with active page control change debounce time.
+   */
+  public activePageControlDebounceTime?: number | BehaviorSubject<number>;
 }

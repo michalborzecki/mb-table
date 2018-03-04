@@ -16,6 +16,8 @@ import { CellRenderer } from './cell-renderer';
 import { ColumnDefinition } from './column-definition';
 import { SortDirection, ColumnSortState } from './sort/sort-algorithm';
 import { TableConfiguration } from './table-configuration';
+import { ChangePageType } from './pagination/change-page-type';
+import { FormControl } from '@angular/forms';
 
 let $ = $_;
 let elementResizeDetector = elementResizeDetector_;
@@ -65,6 +67,7 @@ export class MbTableComponent implements OnInit, AfterViewInit, AfterViewChecked
   }
   CellRenderer: typeof CellRenderer = CellRenderer;
   SortDirection: typeof SortDirection = SortDirection;
+  ChangePageType: typeof ChangePageType = ChangePageType;
 
   configuration: BehaviorSubject<TableConfiguration> = new BehaviorSubject(new TableConfiguration());
   source: BehaviorSubject<any[]> = new BehaviorSubject([]);
@@ -84,6 +87,7 @@ export class MbTableComponent implements OnInit, AfterViewInit, AfterViewChecked
 
   private lastSortChangedColumn: Subject<ColumnDefinition> = new Subject();
   private resetSortButtonClick: Subject<Event> = new Subject();
+  private activePageChange: Subject<ChangePageType> = new Subject();
 
   isDuplicationEnabled = true;
   isEditionEnabled = true;
@@ -136,8 +140,50 @@ export class MbTableComponent implements OnInit, AfterViewInit, AfterViewChecked
       sortEnabled ? sortAlgorithm.sort(filteredSource) : filteredSource.slice(0)
   );
 
-  paginatedSource: Observable<any[]> = this.sortedSource.map(arr => arr.slice(0));
+  private amountOfPages: Observable<number> = Observable.combineLatest(
+    this.configuration.switchMap(c => c.pageSize),
+    this.sortedSource,
+    function (pageSize, sortedSource) {
+      if (!(pageSize > 0)) {
+        pageSize = 20;
+      }
+      return sortedSource.length === 0 ? 1 : Math.ceil(sortedSource.length / pageSize);
+    }
+  );
+
+  private activePage: Observable<number> = Observable.combineLatest(
+    this.configuration.switchMap(c => c.activePage),
+    this.amountOfPages,
+    function (activePage, amountOfPages) {
+      if (activePage > amountOfPages) {
+        return amountOfPages;
+      } else if (activePage < 1) {
+        return 1;
+      } else {
+        return activePage;
+      }
+    }
+  );
+
+  private paginatedSource: Observable<any[]> = Observable.combineLatest(
+    this.sortedSource,
+    this.activePage.distinctUntilChanged(),
+    this.configuration.switchMap(c => c.paginationEnabled),
+    this.configuration.switchMap(c => c.pageSize),
+    function (sortedSource, activePage, paginationEnabled, pageSize) {
+      if (paginationEnabled) {
+        const startIndex = (activePage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, sortedSource.length);
+        return sortedSource.slice(startIndex, endIndex);
+      } else {
+        return sortedSource.slice(0);
+      }
+    }
+  );
   processedSource: Observable<any[]> = this.paginatedSource.map(arr => arr.slice(0));
+
+  activePageControl: FormControl = new FormControl();
+
   editedRows: any[] = [];
   createdRows: any = [];
   selectedRows: any[] = [];
@@ -168,6 +214,7 @@ export class MbTableComponent implements OnInit, AfterViewInit, AfterViewChecked
   ngOnInit(): void {
     this.setupColumnSortChangeHandler();
     this.setupSortResetHandler();
+    this.setupPageChangeHandler();
   }
 
   private setupColumnSortChangeHandler(): void {
@@ -196,6 +243,37 @@ export class MbTableComponent implements OnInit, AfterViewInit, AfterViewChecked
     this.resetSortButtonClick
       .withLatestFrom(this.configuration.switchMap(c => c.sortAlgorithm))
       .subscribe(([, sortAlgorithm]) => sortAlgorithm.resetSort());
+  }
+
+  private setupPageChangeHandler(): void {
+    this.activePageChange
+      .withLatestFrom(this.amountOfPages, this.activePage)
+      .subscribe(([changePageType, amountOfPages, activePage]) => {
+        let nextActivePage;
+        switch (changePageType) {
+          case ChangePageType.Previous:
+            nextActivePage = Math.max(activePage - 1, 1);
+            break;
+          case ChangePageType.Next:
+            nextActivePage = Math.min(activePage + 1, amountOfPages);
+            break;
+          case ChangePageType.First:
+            nextActivePage = 1;
+            break;
+          case ChangePageType.Last:
+            nextActivePage = amountOfPages;
+            break;
+        }
+        this.configuration.getValue().activePage.next(nextActivePage);
+      });
+    this.activePageControl.valueChanges
+      .map(value => parseInt(value, 10))
+      .withLatestFrom(this.amountOfPages, this.activePage)
+      .filter(([page, amountOfPages, activePage]) => page !== NaN && page >= 1 && page <= amountOfPages && page !== activePage)
+      .withLatestFrom(this.configuration.switchMap(c => c.activePageControlDebounceTime))
+      .debounce(([, debounceTime]) => Observable.timer(debounceTime))
+      .map(([[page]]) => page)
+      .subscribe(page => this.configuration.getValue().activePage.next(page));
   }
 
   setupColumnsWidth() {
@@ -361,29 +439,6 @@ export class MbTableComponent implements OnInit, AfterViewInit, AfterViewChecked
 
   public getCellValue(row: any, column: any): any {
     return column.value.getValue()(row);
-  }
-
-  private performPagination(source: any[]): any[] {
-    let startIndex = this.pageSize * this.selectedPage;
-    return source.slice(startIndex, startIndex + this.pageSize);
-  }
-
-  public changePage(pageNumber: number): void {
-    if (pageNumber < 0) {
-      pageNumber = 0;
-    } else if (pageNumber > this.numberOfPages - 1) {
-      pageNumber = this.numberOfPages - 1;
-    }
-    this.selectedPage = pageNumber;
-    this.selectedPageTextValue = (pageNumber + 1).toString();
-    // this.refreshGrid(GridRefreshSteps.PAGINATION);
-  }
-
-  public changePageFromText(textNumber): void {
-    const newPageNumber = parseInt(textNumber, 10);
-    if (newPageNumber >= 1 && newPageNumber <= this.numberOfPages) {
-      this.changePage(newPageNumber - 1);
-    }
   }
 
   // public selectRow(row: any, event: MouseEvent): void {

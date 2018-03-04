@@ -32,33 +32,33 @@
       <div class="input-group-btn">
         <button
           class="btn btn-sm btn-default"
-          [disabled]="selectedPage == 0"
-          (click)="changePage(0)">
+          [disabled]="(activePage | async) == 1"
+          (click)="activePageChange.next(ChangePageType.First)">
           <span class="glyphicon glyphicon-fast-backward"></span>
         </button>
         <button
           class="btn btn-sm btn-default"
-          [disabled]="selectedPage == 0"
-          (click)="changePage(selectedPage - 1)">
+          [disabled]="(activePage | async) == 1"
+          (click)="activePageChange.next(ChangePageType.Previous)">
           <span class="glyphicon glyphicon-backward"></span>
         </button>
       </div>
       <input
         type="text"
         class="form-control input-sm"
-        [ngModel]="selectedPageTextValue"
-        (ngModelChange)="changePageFromText($event)">
+        [ngModel]="activePage | async"
+        [formControl]="activePageControl">
       <div class="input-group-btn">
         <button
           class="btn btn-sm btn-default"
-          [disabled]="selectedPage == numberOfPages - 1"
-          (click)="changePage(selectedPage + 1)">
+          [disabled]="(activePage | async) == (amountOfPages | async)"
+          (click)="activePageChange.next(ChangePageType.Next)">
           <span class="glyphicon glyphicon-forward"></span>
         </button>
         <button
           class="btn btn-sm btn-default"
-          [disabled]="selectedPage == numberOfPages - 1"
-          (click)="changePage(numberOfPages - 1)">
+          [disabled]="(activePage | async) == (amountOfPages | async)"
+          (click)="activePageChange.next(ChangePageType.Last)">
           <span class="glyphicon glyphicon-fast-forward"></span>
         </button>
       </div>
