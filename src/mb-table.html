@@ -31,13 +31,13 @@
     <div *ngIf="(configuration | async).paginationEnabled | async" class="input-group pagination-bar">
       <div class="input-group-btn">
         <button
-          class="btn btn-sm btn-default"
+          class="btn btn-sm btn-default jump-to-first-page"
           [disabled]="(activePage | async) == 1"
           (click)="activePageChange.next(ChangePageType.First)">
           <span class="glyphicon glyphicon-fast-backward"></span>
         </button>
         <button
-          class="btn btn-sm btn-default"
+          class="btn btn-sm btn-default jump-to-previous-page"
           [disabled]="(activePage | async) == 1"
           (click)="activePageChange.next(ChangePageType.Previous)">
           <span class="glyphicon glyphicon-backward"></span>
@@ -45,18 +45,18 @@
       </div>
       <input
         type="text"
-        class="form-control input-sm"
+        class="form-control input-sm active-page"
         [ngModel]="activePage | async"
         [formControl]="activePageControl">
       <div class="input-group-btn">
         <button
-          class="btn btn-sm btn-default"
+          class="btn btn-sm btn-default jump-to-next-page"
           [disabled]="(activePage | async) == (amountOfPages | async)"
           (click)="activePageChange.next(ChangePageType.Next)">
           <span class="glyphicon glyphicon-forward"></span>
         </button>
         <button
-          class="btn btn-sm btn-default"
+          class="btn btn-sm btn-default jump-to-last-page"
           [disabled]="(activePage | async) == (amountOfPages | async)"
           (click)="activePageChange.next(ChangePageType.Last)">
           <span class="glyphicon glyphicon-fast-forward"></span>

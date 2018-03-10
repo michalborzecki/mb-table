@@ -4,8 +4,6 @@ import {
 } from '@angular/core';
 import {
   ColumnDefinition,
-  SortAlgorithm,
-  MultiColumnSort,
   TableConfiguration,
 } from '../../index';
 
@@ -21,6 +19,5 @@ import {
 export class TestHostComponent {
   @Input() columns: ColumnDefinition[] = [];
   @Input() source: any[] = [];
-  @Input() sortAlgorithm: SortAlgorithm = new MultiColumnSort();
   @Input() configuration: TableConfiguration = new TableConfiguration();
 }

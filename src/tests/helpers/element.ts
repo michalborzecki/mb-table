@@ -38,6 +38,26 @@ export function getPaginationBar(fixture: ComponentFixture<any>): HTMLElement {
   return fixture.nativeElement.querySelector('.pagination-bar');
 }
 
+export function getActivePageInput(fixture: ComponentFixture<any>): HTMLInputElement {
+  return fixture.nativeElement.querySelector('.active-page');
+}
+
+export function getJumpToFirstPageButton(fixture: ComponentFixture<any>): HTMLElement {
+  return fixture.nativeElement.querySelector('.jump-to-first-page');
+}
+
+export function getJumpToPreviousPageButton(fixture: ComponentFixture<any>): HTMLElement {
+  return fixture.nativeElement.querySelector('.jump-to-previous-page');
+}
+
+export function getJumpToNextPageButton(fixture: ComponentFixture<any>): HTMLElement {
+  return fixture.nativeElement.querySelector('.jump-to-next-page');
+}
+
+export function getJumpToLastPageButton(fixture: ComponentFixture<any>): HTMLElement {
+  return fixture.nativeElement.querySelector('.jump-to-last-page');
+}
+
 export function getResetSortButton(fixture: ComponentFixture<any>): HTMLElement {
   return fixture.nativeElement.querySelector('.reset-sort');
 }
